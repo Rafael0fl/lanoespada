@@ -1,0 +1,46 @@
+/* ==========================================================================
+ * Estilos globales del frontend (Tailwind CSS v4).
+ *
+ * Tailwind v4 se importa con la directiva @import "tailwindcss".
+ * Los demas bloques definen la paleta de marca mediante la funcion
+ * @theme de Tailwind. Asi podemos usar clases como:
+ *   bg-brand-600, text-brand-900, etc.
+ *
+ * NOTA: Todo el texto visible respeta el idioma espanol definido en
+ * las paginas. Este archivo solo contiene estilos visuales.
+ * ========================================================================== */
+
+@import "tailwindcss";
+
+@theme {
+  /* Paleta principal de la marca "La No Espada" (verde esmeralda) */
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-brand-950: #022c22;
+
+  /* Tipografia de la aplicacion */
+  --font-sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Base: eliminamos margenes por defecto y seteamos el fondo de la app */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: #f8fafc;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
