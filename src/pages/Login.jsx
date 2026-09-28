@@ -12,11 +12,14 @@
  * ========================================================================== */
 
 import { useEffect, useState } from 'react'
-import { LogIn, ShieldCheck, Sword, UserRound } from 'lucide-react'
+import { LogIn, ShieldCheck, Sword } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
-import { DEMO_ACCOUNTS, ROLES } from '../data/mockData'
+import { DEMO_ACCOUNTS } from '../data/mockData'
+
+// Etiquetas cortas para el selector rápido por rol.
+const QUICK_LABELS = { admin: 'Admin', socio: 'Socio', tenant: 'Tenant' }
 
 export default function Login() {
   const { login, isAuthenticated, homeRoute } = useAuth()
@@ -24,7 +27,7 @@ export default function Login() {
   const location = useLocation()
 
   // Estado del formulario.
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -44,13 +47,13 @@ export default function Login() {
     e.preventDefault()
     setError('')
 
-    if (!email || !password) {
-      setError('Completá tu email y contraseña.')
+    if (!identifier || !password) {
+      setError('Completá tu usuario y contraseña.')
       return
     }
 
     setLoading(true)
-    const result = await login({ email, password })
+    const result = await login({ identifier, password })
     setLoading(false)
 
     if (!result.ok) {
@@ -64,12 +67,14 @@ export default function Login() {
   }
 
   /* ------------------------------------------------------------------
-   * Acceso rapido: pide los datos de una cuenta demo (los 3 roles).
+   * Selector rápido: una lista por rol. Al elegir una cuenta se
+   * rellenan usuario y contraseña para solo presionar "Ingresar".
    * ----------------------------------------------------------------- */
-  const quickLogin = (roleKey) => {
-    const account = DEMO_ACCOUNTS.find((acc) => acc.role === roleKey)
+  const fillQuickAccount = (e) => {
+    const username = e.target.value
+    const account = DEMO_ACCOUNTS.find((acc) => acc.username === username)
     if (account) {
-      setEmail(account.email)
+      setIdentifier(account.username)
       setPassword(account.password)
       setError('')
     }
@@ -97,18 +102,18 @@ export default function Login() {
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            {/* Email */}
+            {/* Usuario */}
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">
-                Email
+              <label htmlFor="identifier" className="mb-1.5 block text-sm font-medium text-slate-700">
+                Usuario
               </label>
               <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@empresa.com"
+                id="identifier"
+                type="text"
+                autoComplete="username"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="tu usuario"
                 className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
               />
             </div>
@@ -162,24 +167,32 @@ export default function Login() {
             <ShieldCheck className="h-4 w-4" />
             Cuentas de prueba
           </p>
-          <div className="grid grid-cols-3 gap-2">
-            {Object.values(ROLES).map((role) => (
-              <button
-                key={role.key}
-                type="button"
-                onClick={() => quickLogin(role.key)}
-                className="rounded-xl bg-white/10 px-2 py-2.5 text-left transition hover:bg-white/20"
-              >
-                <UserRound className="mb-1 h-4 w-4 text-brand-300" />
-                <p className="text-xs font-semibold text-white">{role.label}</p>
-                <p className="mt-0.5 break-all text-[10px] leading-tight text-brand-200/70">
-                  {DEMO_ACCOUNTS.find((a) => a.role === role.key)?.email}
-                </p>
-              </button>
-            ))}
+          <div className="space-y-3">
+            {['admin', 'socio', 'tenant'].map((roleKey) => {
+              const accounts = DEMO_ACCOUNTS.filter((acc) => acc.role === roleKey)
+              return (
+                <div key={roleKey}>
+                  <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-brand-200/80">
+                    {QUICK_LABELS[roleKey]}
+                  </label>
+                  <select
+                    defaultValue=""
+                    onChange={fillQuickAccount}
+                    className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-400/20 [&>option]:text-slate-900"
+                  >
+                    <option value="">Elegí una cuenta…</option>
+                    {accounts.map((acc) => (
+                      <option key={acc.username} value={acc.username}>
+                        {acc.role === 'tenant' ? acc.name : acc.username}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )
+            })}
           </div>
-          <p className="mt-2 text-[11px] text-brand-200/60">
-            Toca una tarjeta para autocompletar el formulario.
+          <p className="mt-3 text-[11px] text-brand-200/60">
+            Elegí una cuenta para rellenar los campos y presioná "Ingresar".
           </p>
         </div>
       </div>

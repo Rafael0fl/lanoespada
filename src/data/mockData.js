@@ -34,48 +34,62 @@ export const ROLES = {
     label: 'Socio comercial',
     home: '/socio/metrics',
   },
-  cliente: {
-    key: 'cliente',
-    label: 'Cliente / Negocio',
-    home: '/dashboard/stats',
+  tenant: {
+    key: 'tenant',
+    label: 'Tenant',
+    home: '/dashboard/customers',
   },
 }
 
 /* --------------------------------------------------------------------------
  * 2) Cuentas de acceso demo.
  * Simulan la autenticacion. En el futuro esto lo resuelve /v1/auth/login.
- * El campo tenantId solo se usa para el rol 'cliente', apuntando al negocio
+ * El campo tenantId solo se usa para el rol 'tenant', apuntando al negocio
  * que ese usuario administra.
  * ------------------------------------------------------------------------ */
+// El login funciona por USERNAME (no exige formato de email).
+// Formato:  nombre@admin -> Admin, nombre@socio -> Socio,  nombre -> Tenant.
+// Contraseñas de prueba: admin 000 | socios 456 | tenants 123.
 export const DEMO_ACCOUNTS = [
-  {
-    email: 'admin@lanoespada.com',
-    password: 'admin123',
-    name: 'Equipo La No Espada',
-    role: 'admin',
-  },
-  {
-    email: 'socio@lanoespada.com',
-    password: 'socio123',
-    name: 'Agustina Díaz',
-    role: 'socio',
-  },
-  {
-    email: 'negocio@lanoespada.com',
-    password: 'negocio123',
-    name: 'Consultorio San Benito',
-    role: 'cliente',
-    tenantId: 't-001',
-  },
+  // 1 admin solamente
+  { username: 'rafael@admin', password: '000', name: 'Rafael (Admin)', role: 'admin' },
+  // Socios de prueba
+  { username: 'rafael@socio', password: '456', name: 'Rafael', role: 'socio' },
+  { username: 'nahuel@socio', password: '456', name: 'Nahuel', role: 'socio' },
+  { username: 'alejandro@socio', password: '456', name: 'Alejandro', role: 'socio' },
+  { username: 'eliana@socio', password: '456', name: 'Eliana', role: 'socio' },
+  { username: 'florencia@socio', password: '456', name: 'Florencia', role: 'socio' },
+  { username: 'Zagreo@socio', password: '456', name: 'Zagreo', role: 'socio' },
+  // Tenants de prueba: UNA cuenta por cada negocio [TEST] de la pseudo-DB.
+  // El username es el nombre del negocio sin el prefijo "[TEST] " ni acentos
+  // (ej: boxperseo -> Box Perseo). Todas con clave 123.
+  { username: 'clinicaasclepio', password: '123', name: 'Clínica Asclepio', role: 'tenant', tenantId: 't-001' },
+  { username: 'dentalposeidon', password: '123', name: 'Dental Poseidón', role: 'tenant', tenantId: 't-002' },
+  { username: 'spaeros', password: '123', name: 'Spa Eros', role: 'tenant', tenantId: 't-003' },
+  { username: 'gymhercules', password: '123', name: 'Gym Hércules', role: 'tenant', tenantId: 't-004' },
+  { username: 'tabernadionisio', password: '123', name: 'Taberna Dionisio', role: 'tenant', tenantId: 't-005' },
+  { username: 'cafeteseo', password: '123', name: 'Café Teseo', role: 'tenant', tenantId: 't-006' },
+  { username: 'tiendahermes', password: '123', name: 'Tienda Hermes', role: 'tenant', tenantId: 't-007' },
+  { username: 'servicioshefesto', password: '123', name: 'Servicios Hefesto', role: 'tenant', tenantId: 't-008' },
+  { username: 'consultorioatenea', password: '123', name: 'Consultorio Atenea', role: 'tenant', tenantId: 't-009' },
+  { username: 'sonrisahera', password: '123', name: 'Sonrisa Hera', role: 'tenant', tenantId: 't-010' },
+  { username: 'esteticaafrodita', password: '123', name: 'Estética Afrodita', role: 'tenant', tenantId: 't-011' },
+  { username: 'crossfitaquiles', password: '123', name: 'CrossFit Aquiles', role: 'tenant', tenantId: 't-012' },
+  { username: 'barnemesis', password: '123', name: 'Bar Némesis', role: 'tenant', tenantId: 't-013' },
+  { username: 'cafeorfeo', password: '123', name: 'Café Orfeo', role: 'tenant', tenantId: 't-014' },
+  { username: 'outletprometeo', password: '123', name: 'Outlet Prometeo', role: 'tenant', tenantId: 't-015' },
+  { username: 'tallericaro', password: '123', name: 'Taller Ícaro', role: 'tenant', tenantId: 't-016' },
+  { username: 'sanatorioapolo', password: '123', name: 'Sanatorio Apolo', role: 'tenant', tenantId: 't-017' },
+  { username: 'odontologiahades', password: '123', name: 'Odontología Hades', role: 'tenant', tenantId: 't-018' },
+  { username: 'bellezaselene', password: '123', name: 'Belleza Selene', role: 'tenant', tenantId: 't-019' },
+  { username: 'boxperseo', password: '123', name: 'Box Perseo', role: 'tenant', tenantId: 't-020' },
 ]
 
 /* --------------------------------------------------------------------------
  * 3) INDUSTRY_SCHEMA
  * Define, por rubro del negocio, que "features" se pueden habilitar y como
  * se configuran (JSONB). Este esquema alimenta:
- *   - El formulario dinamico de registro del socio (RegisterBusiness).
- *   - La ficha de configuracion del cliente (DashboardSettings), que solo
- *     muestra los features habilitados por el socio.
+ *   - El selector de rubro y funciones del alta de tenants (RegisterTenant).
  *
  * Estructura de cada feature:
  *   key          -> identificador (inglés).
@@ -484,75 +498,7 @@ export const GLOBAL_METRICS = {
 }
 
 /* --------------------------------------------------------------------------
- * 6) MOCK_CUSTOMERS
- * Conversaciones de ejemplo de un negocio (para la vista del rol 'cliente').
- * Cada item es un Customer que le escribio al negocio por WhatsApp.
- * ------------------------------------------------------------------------ */
-export const MOCK_CUSTOMERS = [
-  {
-    id: 'c-1',
-    name_user: 'Rafael Lobo',
-    wa_id: '5493813465304',
-    initials: 'RL',
-    last_message: '¿Los martes atiende la Dra. Benicio?',
-    last_activity: 'Hace 5 min',
-    messages_today: 4,
-    is_active: true,
-  },
-  {
-    id: 'c-2',
-    name_user: 'María González',
-    wa_id: '5493815120987',
-    initials: 'MG',
-    last_message: '¡Hola! Quiero sacar turno con el Dr. Pérez.',
-    last_activity: 'Hace 12 min',
-    messages_today: 9,
-    is_active: true,
-  },
-  {
-    id: 'c-3',
-    name_user: 'Carlos Tapia',
-    wa_id: '5493814773344',
-    initials: 'CT',
-    last_message: '¿Cuánto sale una consulta particular?',
-    last_activity: 'Hace 31 min',
-    messages_today: 2,
-    is_active: true,
-  },
-  {
-    id: 'c-4',
-    name_user: 'Lucía Ferreyra',
-    wa_id: '5493816001122',
-    initials: 'LF',
-    last_message: 'Gracias, quedó confirmado. 👍',
-    last_activity: 'Hace 1 h',
-    messages_today: 3,
-    is_active: true,
-  },
-  {
-    id: 'c-5',
-    name_user: 'Jorge Medina',
-    wa_id: '5493813228899',
-    initials: 'JM',
-    last_message: '¿Aceptan OSDE?',
-    last_activity: 'Ayer',
-    messages_today: 0,
-    is_active: false,
-  },
-  {
-    id: 'c-6',
-    name_user: 'Ana Pereyra',
-    wa_id: '5493817331212',
-    initials: 'AP',
-    last_message: 'Necesito un informe clínico.',
-    last_activity: 'Ayer',
-    messages_today: 0,
-    is_active: false,
-  },
-]
-
-/* --------------------------------------------------------------------------
- * 7) HISTORIAL DE BACKUPS (mock del boton "Backup Manual de Base de Datos").
+ * 6) HISTORIAL DE BACKUPS (mock del boton "Backup Manual de Base de Datos").
  * ------------------------------------------------------------------------ */
 export const BACKUP_HISTORY = [
   { id: 'b-3', date: '2026-09-08 03:00', status: 'ok', size: '48.2 MB', manual: false },

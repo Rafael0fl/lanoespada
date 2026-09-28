@@ -8,10 +8,16 @@
  *
  *   /login                        -> Login.jsx (publica)
  *   /admin                        -> SOLO rol 'admin'  (mi panel de control)
- *   /socio/metrics                -> SOLO rol 'socio'  (estadisticas)
- *   /socio/register               -> SOLO rol 'socio'  (registro de negocios)
- *   /dashboard/stats              -> SOLO rol 'cliente' (metricas del negocio)
- *   /dashboard/settings           -> SOLO rol 'cliente' (config del negocio)
+ *   /socio/tenant/nuevo           -> SOLO rol 'socio'  (Añadir Tenant)
+ *   /socio/tenants                -> SOLO rol 'socio'  (Ver Tenants)
+ *   /socio/tenants/:tenantId      -> SOLO rol 'socio'  (customers del tenant)
+ *   /socio/tenants/.../chats/:id  -> SOLO rol 'socio'  (chat estilo WhatsApp)
+ *   /socio/metrics                -> SOLO rol 'socio'  (metricas)
+ *   /dashboard/customers          -> SOLO rol 'tenant' (sus clientes)
+ *   /dashboard/customers/:id      -> SOLO rol 'tenant' (chat con un cliente)
+ *   /dashboard/metrics            -> SOLO rol 'tenant' (metricas del negocio)
+ *   /dashboard/settings           -> SOLO rol 'tenant' (config: herramientas)
+ *   /dashboard/settings/:feature  -> SOLO rol 'tenant' (editor de una feature)
  *   *                             -> NotFound (404)
  *
  * Como se protegen las rutas:
@@ -22,7 +28,7 @@
  *   con sidebar + nav items del rol) que tambien renderiza <Outlet />.
  * ========================================================================== */
 
-import { BarChart3, LayoutDashboard, Settings, Store } from 'lucide-react'
+import { BarChart3, LayoutDashboard, LayoutList, Settings, Store, Users } from 'lucide-react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import RequireAuth, { HomeRedirect } from './components/RequireAuth'
@@ -31,9 +37,15 @@ import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import Metrics from './pages/socio/Metrics'
-import RegisterBusiness from './pages/socio/RegisterBusiness'
-import DashboardStats from './pages/cliente/DashboardStats'
-import DashboardSettings from './pages/cliente/DashboardSettings'
+import RegisterTenant from './pages/socio/RegisterTenant'
+import TenantsList from './pages/socio/TenantsList'
+import TenantCustomers from './pages/socio/TenantCustomers'
+import ChatPage from './pages/socio/ChatPage'
+import CustomersList from './pages/tenant/CustomersList'
+import TenantChatPage from './pages/tenant/TenantChatPage'
+import TenantMetrics from './pages/tenant/TenantMetrics'
+import ToolsList from './pages/tenant/ToolsList'
+import FeatureTool from './pages/tenant/FeatureTool'
 
 /* --------------------------------------------------------------------------
  * Navegacion de cada rol.
@@ -44,12 +56,14 @@ const adminNavItems = [
 ]
 
 const partnerNavItems = [
+  { to: '/socio/tenant/nuevo', label: 'Añadir Tenant', icon: Store },
+  { to: '/socio/tenants', label: 'Ver Tenants', icon: LayoutList },
   { to: '/socio/metrics', label: 'Métricas', icon: BarChart3 },
-  { to: '/socio/register', label: 'Registrar negocio', icon: Store },
 ]
 
 const clientNavItems = [
-  { to: '/dashboard/stats', label: 'Estadísticas', icon: BarChart3 },
+  { to: '/dashboard/customers', label: 'Ver clientes', icon: Users },
+  { to: '/dashboard/metrics', label: 'Métricas', icon: BarChart3 },
   { to: '/dashboard/settings', label: 'Configuración', icon: Settings },
 ]
 
@@ -74,17 +88,23 @@ export default function App() {
         <Route element={<AppShell navItems={partnerNavItems} />}>
           {/* La raiz /socio cae directo en metricas */}
           <Route path="/socio" element={<Navigate to="/socio/metrics" replace />} />
+          <Route path="/socio/tenant/nuevo" element={<RegisterTenant />} />
+          <Route path="/socio/tenants" element={<TenantsList />} />
+          <Route path="/socio/tenants/:tenantId" element={<TenantCustomers />} />
+          <Route path="/socio/tenants/:tenantId/chats/:customerId" element={<ChatPage />} />
           <Route path="/socio/metrics" element={<Metrics />} />
-          <Route path="/socio/register" element={<RegisterBusiness />} />
         </Route>
       </Route>
 
-      {/* ================== ROL: CLIENTE ================== */}
-      <Route element={<RequireAuth roles={['cliente']} />}>
+      {/* ================== ROL: TENANT ================== */}
+      <Route element={<RequireAuth roles={['tenant']} />}>
         <Route element={<AppShell navItems={clientNavItems} />}>
-          <Route path="/dashboard" element={<Navigate to="/dashboard/stats" replace />} />
-          <Route path="/dashboard/stats" element={<DashboardStats />} />
-          <Route path="/dashboard/settings" element={<DashboardSettings />} />
+          <Route path="/dashboard" element={<Navigate to="/dashboard/customers" replace />} />
+          <Route path="/dashboard/customers" element={<CustomersList />} />
+          <Route path="/dashboard/customers/:customerId" element={<TenantChatPage />} />
+          <Route path="/dashboard/metrics" element={<TenantMetrics />} />
+          <Route path="/dashboard/settings" element={<ToolsList />} />
+          <Route path="/dashboard/settings/:featureKey" element={<FeatureTool />} />
         </Route>
       </Route>
 

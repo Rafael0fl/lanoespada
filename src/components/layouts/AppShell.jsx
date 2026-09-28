@@ -6,7 +6,7 @@
  * Responsabilidades:
  *   - Sidebar de navegación en desktop (oculto en pantallas chicas).
  *   - Barra de navegación inferior en mobile (UX mobile-first para el rol
- *     'cliente', pero disponible para todos los roles).
+ *     'tenant', pero disponible para todos los roles).
  *   - Header superior con el rol y los datos del usuario + botón Salir.
  *   - Renderiza el contenido de la pagina hija con <Outlet />.
  *

@@ -5,4 +5,21 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    // Escucha en todas las interfaces: evita problemas de resolver 'localhost'
+    // como IPv6 (ngrok/telefono dialean IPv4) y permite entrar por IP local.
+    host: true,
+    // Permite entradas por los tuneles ngrok (el Host de la request es el
+    // dominio .ngrok-free.dev, que Vite bloquea por defecto con allowedHosts).
+    allowedHosts: ['.ngrok-free.dev'],
+    // Proxy: en desarrollo las llamadas a /v1/* van al backend FastAPI local.
+    // Si el backend esta apagado, el proxy devuelve error rapido y el
+    // frontend cae en su pseudo-DB (modo demo).
+    proxy: {
+      '/v1': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
+  },
 })

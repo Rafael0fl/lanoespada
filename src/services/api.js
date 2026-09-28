@@ -1,0 +1,204 @@
+/* ==========================================================================
+ * api.js
+ * --------------------------------------------------------------------------
+ * Capa de servicios del frontend. Cada funcion intenta llamar al backend
+ * real (FastAPI) y, si NO responde (apagado, error, timeout), cae en la
+ * pseudo base de datos local (data/mockBackend.js) para seguir probando
+ * la interfaz en modo demo.
+ *
+ * Forma de uso:
+ *   const { data, mock } = await fetchTenants('mios', socio)
+ *   // mock === true  -> se estan mostrando datos ficticios (banner demo)
+ *   // mock === false -> respuesta real del backend
+ *
+ * La URL base se toma de VITE_API_URL (opcional). Si no esta definida,
+ * se usa '/v1' y Vite (dev o build) la proxya al backend de produccion.
+ * En desarrollo configuramos el proxy hacia http://localhost:8000 en
+ * vite.config.js.
+ * ========================================================================== */
+
+import * as mock from '../data/mockBackend'
+
+const API_BASE = (import.meta.env.VITE_API_URL ?? '/v1').replace(/\/+$/, '')
+
+// Timeout corto: si el backend no responde rapido, fallamos al modo demo.
+const TIMEOUT_MS = 1800
+
+/* Token de la sesion guardada (AuthContext persiste en 'lanoespada_auth').
+   El usuario logueado viaja en Authorization: Bearer <token>. */
+function getAuthToken() {
+  try {
+    const raw = localStorage.getItem('lanoespada_auth')
+    const user = raw ? JSON.parse(raw) : null
+    return user?.token || ''
+  } catch {
+    return ''
+  }
+}
+
+/* Intenta un request real. Lanza error si falla (red / HTTP / timeout). */
+async function request(path, { method = 'GET', body } = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  const headers = {}
+  if (body) headers['Content-Type'] = 'application/json'
+  const token = getAuthToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    })
+    if (!res.ok) {
+      let detail = ''
+      try {
+        const payload = await res.json()
+        detail = payload?.detail || ''
+      } catch {
+        // El body no es JSON (ej: error del proxy); seguimos con status.
+      }
+      const err = new Error(detail || `HTTP ${res.status}`)
+      err.status = res.status // para distinguir "backend respondio con error" vs "apagado"
+      throw err
+    }
+    return await res.json()
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/* Envuelve una llamada real y devuelve { data, mock } con fallback a mock.
+   Un error HTTP REAL (401/403/404/409/422...) NO cae al modo demo: se
+   propaga para que la interfaz muestre el error verdadero. Solo backend
+   apagado / timeout (error de red) dispara la pseudo-DB. */
+async function withFallback(realCall, mockCall) {
+  try {
+    const data = await realCall()
+    return { data, mock: false }
+  } catch (err) {
+    if (err.status != null) throw err
+    console.warn('[api] Backend no disponible, usando pseudo-DB.', err?.message || err)
+    const data = await mockCall()
+    return { data, mock: true }
+  }
+}
+
+/* ------------------------------- AUTH ----------------------------------- */
+
+// Login contra el backend real (POST /v1/auth/login, tabla users).
+//
+// - Si el backend responde con 401/403 NO se cae al modo demo: esas
+//   credenciales fueron rechazadas de verdad y hay que avisar al usuario.
+// - Si el backend esta apagado / timeout, se autentica contra las cuentas
+//   demo (misma lista que el login falso de antes) para seguir probando.
+//
+// Retorna:
+//   { data, mock }            -> login OK (data: { access_token, user }).
+//   { error, status }         -> el backend respondio y rechazo las credenciales.
+//   throw                     -> credenciales invalidas en modo demo.
+export async function loginUser({ identifier, password } = {}) {
+  try {
+    const data = await request('/auth/login', {
+      method: 'POST',
+      body: { identifier, password },
+    })
+    return { data, mock: false }
+  } catch (err) {
+    if (err.status != null) {
+      return {
+        error: 'Credenciales incorrectas. Revisá el usuario y la contraseña.',
+        status: err.status,
+      }
+    }
+    console.warn('[api] Backend no responde, login contra cuentas demo.', err?.message || err)
+    const data = await mock.loginUser({ identifier, password })
+    return { data, mock: true }
+  }
+}
+
+/* ------------------------------ TENANTS --------------------------------- */
+
+// Listado de tenants. scope: 'mios' | 'todos'.
+export function fetchTenants({ scope = 'todos', socio = '' } = {}) {
+  const qs = `?scope=${encodeURIComponent(scope)}&socio=${encodeURIComponent(socio)}`
+  return withFallback(
+    () => request(`/tenants${qs}`),
+    () => mock.listTenants({ scope, socio }),
+  )
+}
+
+// Detalle de un tenant (se usa al entrar a "Ver Tenants").
+export function fetchTenant(tenantId) {
+  return withFallback(
+    () => request(`/tenants/${encodeURIComponent(tenantId)}`),
+    () => mock.getTenant(tenantId),
+  )
+}
+
+// Crear un tenant (formulario "Añadir Tenant").
+// Un error HTTP real (409 usuario repetido, 422 datos invalidos, 403 rol...)
+// NO cae al modo demo: se propaga para mostrar el error verdadero.
+// Solo ante backend apagado / timeout se usa la pseudo-DB.
+export function createTenant(payload) {
+  return withFallback(
+    () => request('/tenants', { method: 'POST', body: payload }),
+    () => mock.createTenant(payload),
+  )
+}
+
+// Actualizar configuracion de un tenant (modal de configuracion).
+export function updateTenant(tenantId, patch) {
+  return withFallback(
+    () => request(`/tenants/${encodeURIComponent(tenantId)}`, { method: 'PATCH', body: patch }),
+    () => mock.updateTenant(tenantId, patch),
+  )
+}
+
+/* ----------------------------- CUSTOMERS --------------------------------- */
+
+// Customers que le escribieron a un tenant.
+export function fetchCustomers(tenantId) {
+  return withFallback(
+    () => request(`/tenants/${encodeURIComponent(tenantId)}/customers`),
+    () => mock.getCustomers(tenantId),
+  )
+}
+
+// Mensajes del chat de un customer.
+export function fetchMessages(tenantId, customerId) {
+  const qs = `?tenantId=${encodeURIComponent(tenantId)}`
+  return withFallback(
+    () => request(`/customers/${encodeURIComponent(customerId)}/messages${qs}`),
+    () => mock.getMessages(tenantId, customerId),
+  )
+}
+
+// Enviar un mensaje del negocio al customer (mock: lo persiste en memoria).
+export function sendMessage(tenantId, customerId, text) {
+  return withFallback(
+    () => request(`/customers/${encodeURIComponent(customerId)}/messages`, { method: 'POST', body: { text, tenantId } }),
+    () => mock.sendMessage(tenantId, customerId, text),
+  )
+}
+
+/* ------------------------------ METRICS ---------------------------------- */
+
+// scope: 'mios' | 'todos' |  range: 'hoy' | 'semana' | 'mes' | 'anio'
+export function fetchMetrics({ scope = 'todos', socio = '', range = 'mes' } = {}) {
+  const qs = `?scope=${encodeURIComponent(scope)}&socio=${encodeURIComponent(socio)}&alcance=${encodeURIComponent(range)}`
+  return withFallback(
+    () => request(`/metrics${qs}`),
+    () => mock.getMetrics({ scope, socio, range }),
+  )
+}
+
+// Metricas del propio tenant (rol cliente). range: 'hoy' | 'semana' | 'mes' | 'anio'.
+export function fetchTenantMetrics(tenantId, range = 'hoy') {
+  const qs = `?alcance=${encodeURIComponent(range)}`
+  return withFallback(
+    () => request(`/tenants/${encodeURIComponent(tenantId)}/metrics${qs}`),
+    () => mock.getTenantMetrics(tenantId, range),
+  )
+}

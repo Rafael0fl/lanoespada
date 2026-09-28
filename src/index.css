@@ -44,3 +44,56 @@ body {
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
 }
+
+/* ==========================================================================
+ * Utilidades del chat estilo WhatsApp (ChatView.jsx)
+ * ========================================================================== */
+
+/* Fondo de la zona de mensajes: beige con patrón de puntos sutil. */
+.wa-chat-bg {
+  background-color: #efeae2;
+  background-image: radial-gradient(circle, rgba(11, 20, 26, 0.05) 1px, transparent 1.25px);
+  background-size: 18px 18px;
+}
+
+/* Burrubuja de mensaje: redondeo + sombra sutil. */
+.wa-bubble {
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+  border-radius: 8px;
+}
+
+/* Cola (triangulito) de las burbujas enviadas (verde). */
+.wa-tail-sent::after {
+  content: '';
+  position: absolute;
+  right: -7px;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  background: #d9fdd3;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* Cola de las burbujas recibidas (blanco). */
+.wa-tail-recv::after {
+  content: '';
+  position: absolute;
+  left: -7px;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+/* Scrollbar fina para las listas del chat. */
+.wa-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.wa-scroll::-webkit-scrollbar-thumb {
+  background: rgba(11, 20, 26, 0.2);
+  border-radius: 999px;
+}
+.wa-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}

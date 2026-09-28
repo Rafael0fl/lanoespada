@@ -197,8 +197,8 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          {/* Historial de backups */}
-          <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
+          {/* Historial de backups (scroll horizontal en mobile) */}
+          <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>

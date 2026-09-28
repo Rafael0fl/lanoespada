@@ -3,27 +3,25 @@
  * --------------------------------------------------------------------------
  * Contexto de autenticacion de la aplicacion.
  *
- * Este contexto simula el login del backend (que aun no existe). Guarda en
- * localStorage el usuario y un token falso para que la sesion sobreviva a
- * un refresh del navegador.
+ * El login va contra el backend real (POST /v1/auth/login, tabla users).
+ * Si el backend esta apagado, el servicio api.js resuelve contra las cuentas
+ * demo y seguimos probando la interfaz (modo demo).
  *
  * Lo que se guarda por usuario:
- *   { name, email, role, token, tenantId? }
+ *   { name, username, email, role, token, tenantId? }
  *
  * Funciones expuestas (via useAuth):
  *   - user            -> objeto del usuario actual (o null si no logueado).
  *   - isAuthenticated -> booleano derivado de 'user'.
- *   - login({email,password}) -> valida contra DEMO_ACCOUNTS y setea sesion.
- *                                Retorna { ok: true } o { ok: false, error }.
+ *   - login({identifier,password}) -> valida contra el backend (o demo) y
+ *                                setea la sesion. Retorna { ok } o { ok:false,error }.
  *   - logout()        -> limpia la sesion.
- *
- * IMPORTANTE: cuando el backend tenga /v1/auth/login, este provider se debe
- * conectar a un fetch a esa ruta y guardar el token real + el rol real.
  * ========================================================================== */
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
-import { DEMO_ACCOUNTS, ROLES } from '../data/mockData'
+import { loginUser } from '../services/api'
+import { ROLES } from '../data/mockData'
 
 // Clave elegida para persistir la sesion en localStorage.
 const STORAGE_KEY = 'lanoespada_auth'
@@ -59,40 +57,40 @@ export function AuthProvider({ children }) {
 
   /* ------------------------------------------------------------------
    * login
-   * Simula la autenticacion comparando contra las cuentas demo.
-   * Cuando exista el backend real, reemplazar por:
-   *   const res = await fetch('/v1/auth/login', { method: 'POST', ... })
-   * y tomar role/token de la respuesta.
+   * Llama al servicio api.loginUser (backend real con fallback a las
+   * cuentas demo si el backend esta apagado).
    * ----------------------------------------------------------------- */
-  const login = async ({ email, password }) => {
-    // Pequeno delay artificial para que se vea el spinner del boton.
-    await new Promise((resolve) => setTimeout(resolve, 600))
+  const login = async ({ identifier, password }) => {
+    // Pequeno delay para que se vea el spinner del boton (real o demo).
+    await new Promise((resolve) => setTimeout(resolve, 300))
 
-    const account = DEMO_ACCOUNTS.find(
-      (acc) =>
-        acc.email.toLowerCase() === email.trim().toLowerCase() &&
-        acc.password === password,
-    )
-
-    if (!account) {
+    let res
+    try {
+      res = await loginUser({ identifier, password })
+    } catch {
       return {
         ok: false,
-        error: 'Credenciales incorrectas. Revisá el email y la contraseña.',
+        error: 'Credenciales incorrectas. Revisá el usuario y la contraseña.',
       }
     }
 
-    // Token falso para simular el JWT que devolveria el backend.
-    const fakeToken = `jwt_demo_${account.role}_${Date.now()}`
+    if (res.error) {
+      return { ok: false, error: res.error }
+    }
+
+    const u = res.data?.user ?? {}
 
     setUser({
-      name: account.name,
-      email: account.email,
-      role: account.role,
-      token: fakeToken,
-      tenantId: account.tenantId ?? null,
+      id: u.id ?? null,
+      name: u.name ?? identifier,
+      username: u.username ?? identifier,
+      email: u.email ?? null,
+      role: u.role,
+      token: res.data?.access_token ?? '',
+      tenantId: u.tenantId ?? null,
     })
 
-    return { ok: true }
+    return { ok: true, mock: Boolean(res.mock ?? false) }
   }
 
   /* -------------------- logout: cierra la sesion ------------------ */
