@@ -24,6 +24,33 @@ const API_BASE = (import.meta.env.VITE_API_URL ?? '/v1').replace(/\/+$/, '')
 // Timeout corto: si el backend no responde rapido, fallamos al modo demo.
 const TIMEOUT_MS = 1800
 
+/* --------------------------------------------------------------------------
+ * BANDERA DEL MODO DEMO
+ * --------------------------------------------------------------------------
+ * VITE_DEMO_MODE decide si la app puede caerse a la pseudo-DB cuando el
+ * backend esta apagado.
+ *
+ *   VITE_DEMO_MODE=true   -> HABILITADO (desarrollo): si el backend no
+ *                            responde, se muestran datos ficticios para
+ *                            poder seguir probando la interfaz.
+ *   VITE_DEMO_MODE=false  -> DESHABILITADO (produccion): si el backend no
+ *                            responde, se propaga el error y la interfaz
+ *                            avisa que no hay conexion con el servidor.
+ *   (sin definir)          -> DESHABILITADO (fail-safe: por defecto NO demo).
+ *
+ * OJO: es opt-in. Se escribe 'true' a proposito (y no '!= false') para que,
+ * si alguien olvida configurar la variable al compilar para produccion, el
+ * sistema NO muestre datos inventados por error.
+ *
+ * Se lee de .env.development en desarrollo (Vite lo carga solo con `npm run dev`).
+ * -------------------------------------------------------------------------- */
+const DEMO_PERMITIDO = import.meta.env.VITE_DEMO_MODE === 'true'
+
+/* Error que se muestra cuando el backend esta apagado y el modo demo esta
+ * deshabilitado (produccion). Es el mensaje que ve el usuario final. */
+const ERROR_BACKEND_CAIDO =
+  'No pudimos conectarnos con el servidor. Revisá tu conexión a internet e intentá de nuevo.'
+
 /* Token de la sesion guardada (AuthContext persiste en 'lanoespada_auth').
    El usuario logueado viaja en Authorization: Bearer <token>. */
 function getAuthToken() {
@@ -52,15 +79,33 @@ async function request(path, { method = 'GET', body } = {}) {
       signal: controller.signal,
     })
     if (!res.ok) {
+      // Leemos el body como TEXTO para poder distinguir un error REAL del
+      // backend de un 502 del proxy de Vite (que significa "backend apagado").
+      //
+      //   - FastAPI SIEMPRE responde JSON: {"detail": "..."}  -> error real
+      //     (401 credenciales, 403 rol, 404, 409, 422 validacion...)
+      //   - El proxy de Vite, cuando no encuentra el backend, responde 502
+      //     con Content-Type text/plain y cuerpo VACIO. Eso NO es un error
+      //     real del backend: es el backend inalcanzable, y corresponde caer
+      //     al modo demo.
       let detail = ''
+      let esJson = false
       try {
-        const payload = await res.json()
-        detail = payload?.detail || ''
+        const raw = await res.text()
+        if (raw) {
+          const payload = JSON.parse(raw)
+          esJson = true
+          detail = payload?.detail || ''
+        }
       } catch {
-        // El body no es JSON (ej: error del proxy); seguimos con status.
+        // El body no es JSON (ej: 502 del proxy de Vite); seguimos con status.
       }
+
       const err = new Error(detail || `HTTP ${res.status}`)
       err.status = res.status // para distinguir "backend respondio con error" vs "apagado"
+      // 5xx sin cuerpo JSON = el proxy no pudo hablar con el backend.
+      // No es un error real, asi que NO debe inhibir el modo demo.
+      err.esBackendInalcanzable = !esJson && res.status >= 500
       throw err
     }
     return await res.json()
@@ -78,7 +123,14 @@ async function withFallback(realCall, mockCall) {
     const data = await realCall()
     return { data, mock: false }
   } catch (err) {
-    if (err.status != null) throw err
+    if (err.status != null && !err.esBackendInalcanzable) throw err
+    // El backend esta apagado: si la bandera habilita la demo, seguimos con
+    // datos ficticios; si esta deshabilitada (produccion), mostramos error.
+    if (!DEMO_PERMITIDO) {
+      const errorFinal = new Error(ERROR_BACKEND_CAIDO)
+      errorFinal.esBackendInalcanzable = true
+      throw errorFinal
+    }
     console.warn('[api] Backend no disponible, usando pseudo-DB.', err?.message || err)
     const data = await mockCall()
     return { data, mock: true }
@@ -106,11 +158,20 @@ export async function loginUser({ identifier, password } = {}) {
     })
     return { data, mock: false }
   } catch (err) {
-    if (err.status != null) {
+    // err.status != null Y no es el proxy caido => el backend respondio y
+    // rechazo las credenciales de verdad: se propaga el error real.
+    // Con el backend apagado el proxy devuelve 502 sin JSON, y ahi si
+    // corresponde caer a las cuentas demo.
+    if (err.status != null && !err.esBackendInalcanzable) {
       return {
         error: 'Credenciales incorrectas. Revisá el usuario y la contraseña.',
         status: err.status,
       }
+    }
+    // Backend apagado. En produccion (bandera apagada) NO autenticamos contra
+    // cuentas demo: mostramos el error de conexion real.
+    if (!DEMO_PERMITIDO) {
+      return { error: ERROR_BACKEND_CAIDO, status: null }
     }
     console.warn('[api] Backend no responde, login contra cuentas demo.', err?.message || err)
     const data = await mock.loginUser({ identifier, password })
