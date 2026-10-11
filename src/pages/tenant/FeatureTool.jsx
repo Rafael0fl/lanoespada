@@ -96,11 +96,12 @@ export default function FeatureTool() {
       schema={schema}
       initial={tenant?.config?.[featureKey]}
       mock={mock}
+      tenant={tenant}
     />
   )
 }
 
-function ToolForm({ tenantId, feature, schema, initial, mock }) {
+function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -182,13 +183,13 @@ function ToolForm({ tenantId, feature, schema, initial, mock }) {
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           {schema.fields.map((field) => (
             <div key={field.key}>
-              {field.type !== 'dynamicList' && field.type !== 'objectList' && field.type !== 'stringList' && field.type !== 'multiselect' && field.type !== 'promoEventList' && (
+              {field.type !== 'dynamicList' && field.type !== 'objectList' && field.type !== 'stringList' && field.type !== 'multiselect' && field.type !== 'promoEventList' && field.type !== 'custom' && (
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">
                   {field.label}
                 </label>
               )}
               <FeatureField
-                field={field}
+                field={field.type === 'custom' ? { ...field, _tenant: tenant } : field}
                 value={form[field.key]}
                 onChange={(next) => setForm((prev) => ({ ...prev, [field.key]: next }))}
               />

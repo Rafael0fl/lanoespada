@@ -19,6 +19,7 @@
 import { useState } from 'react'
 import { BookOpen, Check, ChevronDown, Plus, Trash2 } from 'lucide-react'
 
+import AgendaTurnos from './AgendaTurnos'
 import PromoEventList from './PromoEventList'
 
 const inputClass =
@@ -91,6 +92,16 @@ export default function FeatureField({ field, value, onChange }) {
     /* ------- lista de promociones / eventos (titulo, validez) -- */
     case 'promoEventList':
       return <PromoEventList field={field} value={value} onChange={onChange} />
+
+    /* ------------ componente custom (agenda_turnos) ------------ */
+    case 'custom': {
+      if (field.component === 'AgendaTurnos') {
+        return <AgendaTurnos value={value} onChange={onChange} tenant={field._tenant} />
+      }
+      return (
+        <p className="text-xs text-slate-400">Componente no soportado: {field.component}</p>
+      )
+    }
 
     /* ------------------- seleccion multiple -------------------- */
     case 'multiselect':
@@ -339,6 +350,19 @@ function ObjectListField({ field, value, onChange }) {
                 placeholder={f.placeholder}
                 className={`${inputClass} resize-y`}
               />
+            ) : f.type === 'select' ? (
+              <select
+                value={draft[f.key] ?? ''}
+                onChange={(e) => setDraftField(f.key, e.target.value)}
+                className={inputClass}
+              >
+                <option value="">{f.placeholder ?? 'Seleccionar...'}</option>
+                {(f.options ?? []).map((opt) => (
+                  <option key={opt.value ?? opt} value={opt.value ?? opt}>
+                    {opt.label ?? opt}
+                  </option>
+                ))}
+              </select>
             ) : (
               <input
                 type={f.type === 'number' ? 'number' : 'text'}

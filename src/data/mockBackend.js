@@ -56,6 +56,8 @@ export const FEATURES = [
   { key: 'preguntas_frecuentes', label: 'Preguntas frecuentes', icon: '❓', description: 'Respuestas a dudas comunes' },
   { key: 'politicas', label: 'Políticas', icon: '📜', description: 'Políticas de cancelación, cambio, etc.' },
   { key: 'servicio', label: 'Servicio', icon: '🛎️', description: 'Servicios que ofrece el negocio' },
+  { key: 'profesionales', label: 'Profesionales', icon: '👨‍⚕️', description: 'Profesionales que atienden en el negocio' },
+  { key: 'agenda_turnos', label: 'Agenda de turnos', icon: '📅', description: 'Gestión de turnos con boxes, servicios y profesionales' },
   { key: 'promocion_evento', label: 'Promoción / Evento', icon: '🎉', description: 'Promos y eventos vigentes' },
 ]
 
@@ -193,9 +195,35 @@ export const FEATURE_CONTENT_SCHEMA = {
           { key: 'nombre', label: 'Servicio', type: 'text', placeholder: 'Consulta médica', required: true },
           { key: 'descripcion', label: 'Descripción', type: 'textarea', placeholder: 'Detalle del servicio…', required: true },
           { key: 'precio', label: 'Precio ($)', type: 'number', placeholder: '15000', required: true },
-          { key: 'profesional', label: 'Profesional', type: 'text', placeholder: 'Dr. Nombre Apellido' },
+          { key: 'profesional', label: 'Profesional', type: 'text', placeholder: 'Seleccionar profesional' },
           { key: 'duracion', label: 'Duración', type: 'text', placeholder: '45 minutos' },
         ],
+      },
+    ],
+  },
+  profesionales: {
+    description: 'Listado de profesionales que atienden el negocio.',
+    fields: [
+      {
+        key: 'list',
+        type: 'objectList',
+        itemTitle: 'Profesional',
+        addLabel: 'Añadir profesional',
+        listLabel: 'Profesionales',
+        itemFields: [
+          { key: 'nombre', label: 'Nombre completo', type: 'text', placeholder: 'Dr. Juan Pérez', required: true },
+          { key: 'descripcion', label: 'Tareas / especialidad', type: 'textarea', placeholder: 'Ej.: Traumatología, kinesio...', required: true },
+        ],
+      },
+    ],
+  },
+  agenda_turnos: {
+    description: 'Configuración de la agenda de turnos (boxes, servicios y profesionales).',
+    fields: [
+      {
+        key: 'config',
+        type: 'custom',
+        component: 'AgendaTurnos',
       },
     ],
   },

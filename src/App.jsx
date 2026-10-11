@@ -52,7 +52,7 @@ import FeatureTool from './pages/tenant/FeatureTool'
  * Cada item: { to, label, icon } -> se pinta en AppShell (sidebar + navbar).
  * ------------------------------------------------------------------------ */
 const adminNavItems = [
-  { to: '/admin', label: 'Mi panel de control', icon: LayoutDashboard },
+  { to: '/admin', label: 'cat-spin', icon: LayoutDashboard },
 ]
 
 const partnerNavItems = [
