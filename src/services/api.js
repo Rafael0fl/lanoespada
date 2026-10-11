@@ -80,7 +80,7 @@ async function request(path, { method = 'GET', body } = {}) {
     })
     if (!res.ok) {
       // Leemos el body como TEXTO para poder distinguir un error REAL del
-      // backend de un 502 del proxy de Vite (que significa "backend apagado").
+      // backend de un "backend inalcanzable" (proxy caido / sin backend).
       //
       //   - FastAPI SIEMPRE responde JSON: {"detail": "..."}  -> error real
       //     (401 credenciales, 403 rol, 404, 409, 422 validacion...)
@@ -88,6 +88,8 @@ async function request(path, { method = 'GET', body } = {}) {
       //     con Content-Type text/plain y cuerpo VACIO. Eso NO es un error
       //     real del backend: es el backend inalcanzable, y corresponde caer
       //     al modo demo.
+      //   - En GitHub Pages (sin backend), /v1/* devuelve el 404.html del
+      //     truco SPA (HTML, no JSON). Tampoco es un error real del backend.
       let detail = ''
       let esJson = false
       try {
@@ -103,9 +105,11 @@ async function request(path, { method = 'GET', body } = {}) {
 
       const err = new Error(detail || `HTTP ${res.status}`)
       err.status = res.status // para distinguir "backend respondio con error" vs "apagado"
-      // 5xx sin cuerpo JSON = el proxy no pudo hablar con el backend.
-      // No es un error real, asi que NO debe inhibir el modo demo.
-      err.esBackendInalcanzable = !esJson && res.status >= 500
+      // Sin cuerpo JSON = NO respondio FastAPI (que siempre responde JSON).
+      // Casos: 5xx vacio del proxy de Vite (backend apagado en dev), o el
+      // 404 HTML de GitHub Pages (404.html del truco SPA) cuando /v1/* no
+      // existe porque no hay backend. En ambos corresponde el modo demo.
+      err.esBackendInalcanzable = !esJson
       throw err
     }
     return await res.json()
