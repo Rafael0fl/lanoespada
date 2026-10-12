@@ -102,6 +102,12 @@ export function isFeatureEnabled(features, key) {
  * Contenido editable de cada feature ("herramienta" del tenant).
  * Cada feature es una herramienta independiente con sus propios campos.
  * Los tipos de campo coinciden con FeatureField (components/forms).
+ *
+ * Un itemField puede ser `type: 'select'` con opciones DINAMICAS de otra
+ * feature: `optionsSource: '<featureKey>'` (+ `optionsLabel`, default
+ * 'nombre'). Las opciones se leen de `tenant.config[<featureKey>].list`
+ * (ej: el campo Profesional de Servicios lista los Profesionales). La
+ * opcion vacia (value '') muestra el `placeholder` (ej: 'Sin asignar').
  * ------------------------------------------------------------------------ */
 export const FEATURE_CONTENT_SCHEMA = {
   horarios_atencion: {
@@ -195,7 +201,7 @@ export const FEATURE_CONTENT_SCHEMA = {
           { key: 'nombre', label: 'Servicio', type: 'text', placeholder: 'Consulta médica', required: true },
           { key: 'descripcion', label: 'Descripción', type: 'textarea', placeholder: 'Detalle del servicio…', required: true },
           { key: 'precio', label: 'Precio ($)', type: 'number', placeholder: '15000', required: true },
-          { key: 'profesional', label: 'Profesional', type: 'text', placeholder: 'Seleccionar profesional' },
+          { key: 'profesional', label: 'Profesional', type: 'select', optionsSource: 'profesionales', optionsLabel: 'nombre', placeholder: 'Sin asignar' },
           { key: 'duracion', label: 'Duración', type: 'text', placeholder: '45 minutos' },
         ],
       },

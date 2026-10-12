@@ -189,7 +189,7 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
                 </label>
               )}
               <FeatureField
-                field={field.type === 'custom' ? { ...field, _tenant: tenant } : field}
+                field={['custom', 'objectList'].includes(field.type) ? { ...field, _tenant: tenant } : field}
                 value={form[field.key]}
                 onChange={(next) => setForm((prev) => ({ ...prev, [field.key]: next }))}
               />

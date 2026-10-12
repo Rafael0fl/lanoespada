@@ -21,6 +21,7 @@ import { BookOpen, Check, ChevronDown, Plus, Trash2 } from 'lucide-react'
 
 import AgendaTurnos from './AgendaTurnos'
 import PromoEventList from './PromoEventList'
+import { FEATURE_BY_KEY } from '../../data/mockBackend'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
@@ -315,6 +316,17 @@ function ObjectListField({ field, value, onChange }) {
   const listLabel = field.listLabel ?? 'Lista'
   const [titleField, ...restFields] = itemFields
 
+  /* Opciones de un sub-campo `select`: estaticas (`f.options`) o dinamicas
+     de otra feature (`f.optionsSource` -> tenant.config[source].list,
+     ej: Profesionales). Sin tenant (registro del socio) la lista es vacia. */
+  const optionsFor = (f) => {
+    if (!f.optionsSource) return f.options ?? []
+    const list = field._tenant?.config?.[f.optionsSource]?.list ?? []
+    const labelKey = f.optionsLabel ?? 'nombre'
+    return list.map((item) => String(item?.[labelKey] ?? '').trim()).filter(Boolean)
+  }
+  const sourceLabel = (key) => FEATURE_BY_KEY[key]?.label ?? key
+
   const requiredFilled = itemFields.every((f) =>
     f.required ? String(draft[f.key] ?? '').trim() !== '' : true,
   )
@@ -351,18 +363,26 @@ function ObjectListField({ field, value, onChange }) {
                 className={`${inputClass} resize-y`}
               />
             ) : f.type === 'select' ? (
-              <select
-                value={draft[f.key] ?? ''}
-                onChange={(e) => setDraftField(f.key, e.target.value)}
-                className={inputClass}
-              >
-                <option value="">{f.placeholder ?? 'Seleccionar...'}</option>
-                {(f.options ?? []).map((opt) => (
-                  <option key={opt.value ?? opt} value={opt.value ?? opt}>
-                    {opt.label ?? opt}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <select
+                  value={draft[f.key] ?? ''}
+                  onChange={(e) => setDraftField(f.key, e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">{f.placeholder ?? 'Seleccionar...'}</option>
+                  {optionsFor(f).map((opt) => (
+                    <option key={opt.value ?? opt} value={opt.value ?? opt}>
+                      {opt.label ?? opt}
+                    </option>
+                  ))}
+                </select>
+                {f.optionsSource && optionsFor(f).length === 0 && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Todavía no cargaste nada en {sourceLabel(f.optionsSource)} — hacelo
+                    primero y después volvé acá.
+                  </p>
+                )}
+              </div>
             ) : (
               <input
                 type={f.type === 'number' ? 'number' : 'text'}
