@@ -7,9 +7,6 @@ export default defineConfig({
   base: '/lanoespada/',
   plugins: [react(), tailwindcss()],
   server: {
-    // Escucha en todas las interfaces: evita problemas de resolver 'localhost'
-    // como IPv6 (ngrok/telefono dialean IPv4) y permite entrar por IP local.
-    host: true,
     // Permite entradas por los tuneles ngrok (el Host de la request es el
     // dominio .ngrok-free.dev, que Vite bloquea por defecto con allowedHosts).
     allowedHosts: ['.ngrok-free.dev'],
