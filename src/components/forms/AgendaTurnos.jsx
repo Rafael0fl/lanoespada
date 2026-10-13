@@ -6,7 +6,7 @@
  *   - "Ver": por ahora mensaje "pendiente en terminarse"
  *   - "Configuración": Boxes (con layout horizontal de cards)
  * -------------------------------------------------------------------------- */
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Boxes, CalendarCheck, Clock, Plus, Eye, Settings, Trash2, Wrench } from 'lucide-react'
 
 const inputClass =
@@ -281,11 +281,6 @@ function VerSection({ value, onChange, tenant }) {
   const [fechaISO, setFechaISO] = useState(hoyISO)
   const [reservaEn, setReservaEn] = useState(null) // indice de franja con form abierto
 
-  // Al cambiar de dia o box se cierra el formulario de reserva.
-  useEffect(() => {
-    setReservaEn(null)
-  }, [fechaISO, boxIdx])
-
   if (!boxes || boxes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
@@ -298,6 +293,7 @@ function VerSection({ value, onChange, tenant }) {
     )
   }
 
+  const boxRealIdx = Math.min(boxIdx, boxes.length - 1)
   const box = boxes[boxRealIdx] ?? {}
   const strip = Array.from({ length: 7 }, (_, i) => addDays(hoy, weekOffset * 7 + i))
   const atiende = (date) =>
@@ -313,8 +309,6 @@ function VerSection({ value, onChange, tenant }) {
           day: 'numeric',
           month: 'numeric',
         })
-
-  const boxRealIdx = Math.min(boxIdx, boxes.length - 1)
 
   const patchBox = (idx, patch) => {
     const next = boxes.map((b, i) => (i === idx ? { ...b, ...patch } : b))
@@ -340,18 +334,29 @@ function VerSection({ value, onChange, tenant }) {
   const serviciosElegibles = serviciosBox.length > 0 ? serviciosBox : serviciosTenant
 
   const moverSemana = (dir) => {
+    setReservaEn(null) // al cambiar de dia se cierra el formulario de reserva
     setWeekOffset((o) => o + dir)
     setFechaISO((prev) => toISO(addDays(parseISO(prev), dir * 7)))
   }
   const irAHoy = () => {
+    setReservaEn(null)
     setWeekOffset(0)
     setFechaISO(hoyISO)
   }
   const saltarAFecha = (iso) => {
     if (!iso) return
+    setReservaEn(null)
     setFechaISO(iso)
     const diff = Math.round((parseISO(iso) - parseISO(hoyISO)) / 86400000)
     setWeekOffset(Math.floor(diff / 7))
+  }
+  const elegirBox = (idx) => {
+    setReservaEn(null)
+    setBoxIdx(idx)
+  }
+  const elegirDia = (iso) => {
+    setReservaEn(null)
+    setFechaISO(iso)
   }
 
   return (
@@ -362,7 +367,7 @@ function VerSection({ value, onChange, tenant }) {
           <button
             key={idx}
             type="button"
-            onClick={() => setBoxIdx(idx)}
+            onClick={() => elegirBox(idx)}
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
               idx === Math.min(boxIdx, boxes.length - 1)
                 ? 'bg-brand-600 text-white shadow-sm'
@@ -407,7 +412,7 @@ function VerSection({ value, onChange, tenant }) {
               <button
                 key={iso}
                 type="button"
-                onClick={() => setFechaISO(iso)}
+                onClick={() => elegirDia(iso)}
                 className={`flex flex-col items-center rounded-xl px-1 py-2 transition ${
                   selected ? 'bg-brand-600 text-white shadow-sm' : 'hover:bg-slate-100'
                 }`}
