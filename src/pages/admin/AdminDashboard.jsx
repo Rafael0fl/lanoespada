@@ -3,57 +3,54 @@
  * --------------------------------------------------------------------------
  * Panel del rol 'admin' (ruta /admin).
  *
- * Por ahora el panel es "cat-spin": el gato giratorio como protagonista,
- * centrado y ocupando el 70% del contenedor, mas la asistente Wanwan.
- *
- * TEMA VISUAL (solo aca, solo rol admin):
- *   Paleta de Wanwan (hoja de diseño): pink, light pink, manwoii/maroon,
- *   gold y aqua. Los resplandores de fondo + la tira de cuadros (falda)
- *   son decorativos y no reciben clics (pointer-events-none).
- *
- * El contenido anterior (metricas globales, grafico, backups y tabla de
- * negocios) fue removido a proposito.
+ * Estado actual: placeholder. A la izquierda, tarjeta "Pendiente" (el panel
+ * real de administracion se construye mas adelante). A la derecha, la
+ * fabula "Muerte en Teheran" que Viktor Frankl recoge en
+ * "El hombre en busca de sentido".
  * ========================================================================== */
-
-import SpinningCat from '../../components/admin/SpinningCat'
-import WanwanAsistente from '../../components/admin/WanwanAsistente'
 
 export default function AdminDashboard() {
   return (
-    <div className="relative flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center gap-6 overflow-hidden md:min-h-[calc(100vh-7rem)]">
-      {/* Decoracion Wanwan: resplandores pink/aqua/gold + cuadritos.
-          z-0 -> por detras del gato (z-20) y de la fiesta (z-10). */}
-      <FondoWanwan />
+    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-3">
+      {/* Izquierda: pendiente */}
+      <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-6">
+        <p className="text-lg font-bold text-slate-800">Pendiente</p>
+        <p className="mt-2 text-sm text-slate-500">
+          Acá va el panel de administración: negocios, métricas globales y
+          respaldos. Todavía no está construido.
+        </p>
+      </section>
 
-      {/* El gato: protagonista, centrado, 70% del contenedor.
-          SpinningCat maneja su propia animacion + musica + mute. */}
-      <SpinningCat />
+      {/* Derecha: la fabula */}
+      <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:col-span-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          Para leer mientras tanto
+        </p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+          Muerte en Teherán
+        </h1>
+        <p className="mt-1 text-xs text-slate-400">
+          Fábula que Viktor Frankl recoge en “El hombre en busca de sentido”.
+        </p>
 
-      {/* La asistente: flota sobre todo (fixed z-50) y saluda al entrar. */}
-      <WanwanAsistente />
-    </div>
-  )
-}
-
-/* --------------------------------------------------------------------------
- * Fondo decorativo del panel admin (no interactivo).
- * ------------------------------------------------------------------------ */
-function FondoWanwan() {
-  return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0">
-      {/* Tres resplandores suaves con los colores de Wanwan */}
-      <div className="absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-[#ee5d97]/25 blur-3xl" />
-      <div className="absolute -right-16 top-1/3 h-72 w-72 rounded-full bg-[#8fe3dd]/30 blur-3xl" />
-      <div className="absolute -left-16 bottom-0 h-72 w-72 rounded-full bg-[#ecd9a0]/40 blur-3xl" />
-
-      {/* Tira de cuadros rosa/blanco abajo: su detalle de falda/obi */}
-      <div
-        className="absolute inset-x-0 bottom-0 h-3 opacity-70"
-        style={{
-          backgroundImage: 'repeating-conic-gradient(#f9c7d5 0% 25%, #ffffff 0% 50%)',
-          backgroundSize: '14px 14px',
-        }}
-      />
+        <div className="mt-4 space-y-3 text-sm leading-relaxed text-slate-700">
+          <p>
+            Un rico persa paseaba una mañana con su criado, cuando este se cruzó
+            con la Muerte y sintió que lo amenazaba con la mirada. Temblando,
+            el criado le rogó a su amo que le prestara su caballo más veloz
+            para huir a Teherán y despedirse de su familia. El amo aceptó.
+          </p>
+          <p>
+            Más tarde, el amo se encontró con la Muerte y le reclamó: “¿Por qué
+            asustaste así a mi criado?”. Y la Muerte respondió: “No fue una
+            amenaza. Solo me sorprendió verlo aquí esta mañana, cuando tengo
+            una cita con él esta noche en Teherán”.
+          </p>
+          <p className="border-l-2 border-brand-500 pl-3 text-slate-600 italic">
+            La ironía: huyendo de su destino, corrió directo hacia él.
+          </p>
+        </div>
+      </article>
     </div>
   )
 }
