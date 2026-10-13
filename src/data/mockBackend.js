@@ -647,6 +647,13 @@ function buildDatabase() {
     if (!feats.horarios_atencion && rnd() > 0.2) {
       feats.horarios_atencion = true
     }
+    // Spa Eros (t-003): todas habilitadas menos obras_sociales. No consume
+    // azar para no alterar al resto de tenants del seed.
+    if (i === 2) {
+      FEATURES.forEach((f) => {
+        feats[f.key] = f.key !== 'obras_sociales'
+      })
+    }
 
     const phones = makePhone(rnd)
 
