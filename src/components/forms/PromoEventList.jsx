@@ -29,6 +29,8 @@
 import { useState } from 'react'
 import { Calendar, Check, ChevronDown, Plus, Settings, Trash2 } from 'lucide-react'
 
+import FeatureTabs from './FeatureTabs'
+
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
 
@@ -260,9 +262,12 @@ export default function PromoEventList({ field, value, onChange }) {
   }
 
   return (
-    <div>
-      {/* ---- Formulario de alta ---- */}
-      <p className="text-sm font-semibold text-slate-700">{addLabel}</p>
+    <FeatureTabs
+      count={items.length}
+      renderForm={() => (
+        <div>
+          {/* ---- Formulario de alta ---- */}
+          <p className="text-sm font-semibold text-slate-700">{addLabel}</p>
 
       <div className="mt-3 space-y-3">
         <div>
@@ -343,10 +348,12 @@ export default function PromoEventList({ field, value, onChange }) {
         )}
       </div>
 
-      <hr className="my-4 border-slate-100" />
-
-      {/* ---- Lista + filtro ---- */}
-      <p className="text-sm font-semibold text-slate-700">{listLabel}</p>
+      </div>
+      )}
+      renderList={() => (
+        <div>
+          {/* ---- Lista + filtro ---- */}
+          <p className="text-sm font-semibold text-slate-700">{listLabel}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button
@@ -458,8 +465,10 @@ export default function PromoEventList({ field, value, onChange }) {
               </li>
             )
           })}
-        </ul>
+            </ul>
+          )}
+        </div>
       )}
-    </div>
+    />
   )
 }
