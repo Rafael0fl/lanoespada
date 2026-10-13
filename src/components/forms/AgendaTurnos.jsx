@@ -7,7 +7,7 @@
  *   - "Configuración": Boxes (con layout horizontal de cards)
  * -------------------------------------------------------------------------- */
 import { useState } from 'react'
-import { Boxes, CalendarCheck, Clock, Plus, Eye, Settings, Trash2, Wrench } from 'lucide-react'
+import { Boxes, CalendarCheck, CalendarX, Clock, Plus, Eye, Settings, Trash2, Wrench } from 'lucide-react'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
@@ -175,7 +175,7 @@ function duracionServicio(tenant, nombre) {
  * Valida: hora y cliente obligatorios, que entre en la franja segun la
  * duracion del servicio, y que no se superponga con otra reserva del dia.
  * ------------------------------------------------------------------------ */
-function ReservaForm({ franja, servicios, tenant, existentes, onSave, onCancel }) {
+function ReservaForm({ franja, servicios, tenant, existentes, fechaISO, hoyISO, ahoraHHMM, onSave, onCancel }) {
   const [hora, setHora] = useState('')
   const [servicio, setServicio] = useState(servicios[0] ?? '')
   const [cliente, setCliente] = useState('')
@@ -184,6 +184,10 @@ function ReservaForm({ franja, servicios, tenant, existentes, onSave, onCancel }
   const guardar = () => {
     if (!hora) {
       setError('Elegí la hora del turno.')
+      return
+    }
+    if (fechaISO < hoyISO || (fechaISO === hoyISO && hora <= ahoraHHMM)) {
+      setError('Esa hora ya pasó. Elegí un horario futuro.')
       return
     }
     if (!cliente.trim()) {
@@ -273,8 +277,10 @@ function ReservaForm({ franja, servicios, tenant, existentes, onSave, onCancel }
  * ------------------------------------------------------------------------ */
 function VerSection({ value, onChange, tenant }) {
   const boxes = value?.boxes ?? []
+  const excepciones = value?.excepciones ?? []
   const hoy = new Date()
   const hoyISO = toISO(hoy)
+  const ahoraHHMM = `${String(hoy.getHours()).padStart(2, '0')}:${String(hoy.getMinutes()).padStart(2, '0')}`
 
   const [boxIdx, setBoxIdx] = useState(0)
   const [weekOffset, setWeekOffset] = useState(0)
@@ -295,6 +301,9 @@ function VerSection({ value, onChange, tenant }) {
 
   const boxRealIdx = Math.min(boxIdx, boxes.length - 1)
   const box = boxes[boxRealIdx] ?? {}
+  const excepcionDelDia = excepciones.find((e) => e.fecha === fechaISO)
+  const esPasado = fechaISO < hoyISO
+  const excepcionDe = (date) => excepciones.find((e) => e.fecha === toISO(date))
   const strip = Array.from({ length: 7 }, (_, i) => addDays(hoy, weekOffset * 7 + i))
   const atiende = (date) =>
     (box.franjas ?? []).some((f) => (f.dias ?? []).includes(diaKey(date)))
@@ -424,8 +433,14 @@ function VerSection({ value, onChange, tenant }) {
                   {date.getDate()}
                 </span>
                 <span
-                  className={`mt-1 h-1.5 w-1.5 rounded-full ${atiende(date) ? 'bg-emerald-500' : selected ? 'bg-white/40' : 'bg-slate-200'}`}
-                  title={atiende(date) ? 'El box atiende este día' : 'El box no atiende este día'}
+                  className={`mt-1 h-1.5 w-1.5 rounded-full ${excepcionDe(date) ? 'bg-rose-400' : atiende(date) ? 'bg-emerald-500' : selected ? 'bg-white/40' : 'bg-slate-200'}`}
+                  title={
+                    excepcionDe(date)
+                      ? `Cerrado${excepcionDe(date).motivo ? `: ${excepcionDe(date).motivo}` : ''}`
+                      : atiende(date)
+                        ? 'El box atiende este día'
+                        : 'El box no atiende este día'
+                  }
                 />
               </button>
             )
@@ -455,7 +470,17 @@ function VerSection({ value, onChange, tenant }) {
         <p className="text-sm font-semibold capitalize text-slate-800">
           {tituloFecha} · {box.nombre || 'Box'}
         </p>
-        {franjasDelDia.length === 0 ? (
+        {excepcionDelDia ? (
+          <div className="mt-3 flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+            <CalendarX className="h-5 w-5 shrink-0 text-rose-500" />
+            <div>
+              <p className="text-sm font-semibold text-rose-700">Cerrado</p>
+              {excepcionDelDia.motivo && (
+                <p className="text-xs text-rose-600">{excepcionDelDia.motivo}</p>
+              )}
+            </div>
+          </div>
+        ) : franjasDelDia.length === 0 ? (
           <p className="mt-2 text-sm text-slate-400">Este box no atiende este día.</p>
         ) : (
           <ul className="mt-3 space-y-2">
@@ -490,14 +515,16 @@ function VerSection({ value, onChange, tenant }) {
                           ? 'Sin turnos'
                           : `${reservas.length} turno${reservas.length !== 1 ? 's' : ''}`}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setReservaEn(reservaEn === i ? null : i)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-brand-500 hover:text-brand-700"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        Reservar
-                      </button>
+                      {!esPasado && !excepcionDelDia && (
+                        <button
+                          type="button"
+                          onClick={() => setReservaEn(reservaEn === i ? null : i)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-brand-500 hover:text-brand-700"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Reservar
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -530,6 +557,9 @@ function VerSection({ value, onChange, tenant }) {
                       servicios={serviciosElegibles}
                       tenant={tenant}
                       existentes={(box.reservas ?? []).filter((r) => r.fecha === fechaISO)}
+                      fechaISO={fechaISO}
+                      hoyISO={hoyISO}
+                      ahoraHHMM={ahoraHHMM}
                       onSave={agregarReserva}
                       onCancel={() => setReservaEn(null)}
                     />
@@ -548,7 +578,8 @@ function VerSection({ value, onChange, tenant }) {
   )
 }
 
-function BoxEditForm({ box, onChange, onSave, onCancel }) {
+function BoxEditForm({ box, onChange, onSave, onCancel, onDelete }) {
+  const [confirmaEliminar, setConfirmaEliminar] = useState(false)
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -625,6 +656,37 @@ function BoxEditForm({ box, onChange, onSave, onCancel }) {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+        {onDelete &&
+          (confirmaEliminar ? (
+            <span className="mr-auto inline-flex items-center gap-2">
+              <span className="text-xs font-semibold text-rose-600">
+                Se borran franjas y reservas del box. ¿Seguro?
+              </span>
+              <button
+                type="button"
+                onClick={onDelete}
+                className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+              >
+                Sí, eliminar
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmaEliminar(false)}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              >
+                No
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmaEliminar(true)}
+              className="mr-auto inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              Eliminar box
+            </button>
+          ))}
         {!franjasValidas(box.franjas ?? []) && (
           <span className="mr-auto text-xs text-amber-600">
             Revisá las franjas: cada una necesita días y un rango válido.
@@ -654,9 +716,13 @@ function ConfigSection({ value, onChange, tenant }) {
   const config = value ?? {}
   const boxes = config.boxes ?? []
   const serviciosDisponibles = tenant?.config?.servicio?.list ?? []
+  const step = config.slot_step_minutes ?? 15
+  const excepciones = config.excepciones ?? []
 
   const [editIndex, setEditIndex] = useState(null)
   const [draft, setDraft] = useState(null)
+  const [excFecha, setExcFecha] = useState('')
+  const [excMotivo, setExcMotivo] = useState('')
 
   const startAdd = () => {
     setDraft({ nombre: '', franjas: [], servicios: [], _serviciosDisponibles: serviciosDisponibles })
@@ -695,16 +761,113 @@ function ConfigSection({ value, onChange, tenant }) {
 
   const update = (next) => onChange(next)
 
-  // Botón eliminar disponible si se desea en futuro
-  // eslint-disable-next-line no-unused-vars
   const removeBox = (idx) => {
-    if (editIndex === idx || editIndex === 'new') cancelEdit()
     const nextBoxes = boxes.filter((_, i) => i !== idx)
     update({ ...config, boxes: nextBoxes })
   }
 
+  const deleteEditBox = () => {
+    if (editIndex !== 'new') removeBox(editIndex)
+    cancelEdit()
+  }
+
+  const addExcepcion = () => {
+    if (!excFecha) return
+    if (excepciones.some((e) => e.fecha === excFecha)) return
+    update({ ...config, excepciones: [...excepciones, { fecha: excFecha, motivo: excMotivo.trim() }] })
+    setExcFecha('')
+    setExcMotivo('')
+  }
+
+  const removeExcepcion = (fecha) => {
+    update({ ...config, excepciones: excepciones.filter((e) => e.fecha !== fecha) })
+  }
+
+  const fmtFechaCorta = (iso) => {
+    const [y, m, d] = String(iso).split('-')
+    return `${d}/${m}/${y}`
+  }
+
   return (
     <div className="space-y-6">
+      {/* ---- Configuracion general ---- */}
+      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <Settings className="h-4 w-4 text-brand-600" />
+          General de la agenda
+        </div>
+
+        <div className="mt-3">
+          <label className="mb-1 block text-xs font-medium text-slate-500">
+            Paso de la grilla (minutos)
+          </label>
+          <input
+            type="number"
+            min="5"
+            max="120"
+            value={step}
+            onChange={(e) => {
+              const v = Math.min(120, Math.max(5, Number(e.target.value) || 15))
+              update({ ...config, slot_step_minutes: v })
+            }}
+            className={`${inputClass} max-w-32`}
+          />
+          <p className="mt-1 text-[11px] text-slate-400">
+            Los inicios posibles de turnos caen cada {step} minutos.
+          </p>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-xs font-medium text-slate-500">Días cerrados (feriados, vacaciones)</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <input
+              type="date"
+              value={excFecha}
+              onChange={(e) => setExcFecha(e.target.value)}
+              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+              aria-label="Fecha cerrada"
+            />
+            <input
+              type="text"
+              value={excMotivo}
+              onChange={(e) => setExcMotivo(e.target.value)}
+              placeholder="Motivo (ej: Feriado)"
+              className="min-w-40 flex-1 rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+            />
+            <button
+              type="button"
+              onClick={addExcepcion}
+              disabled={!excFecha}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              Añadir
+            </button>
+          </div>
+          {excepciones.length > 0 && (
+            <ul className="mt-2 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              {excepciones.map((e) => (
+                <li key={e.fecha} className="flex items-center gap-2 px-3 py-2">
+                  <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
+                    {fmtFechaCorta(e.fecha)}
+                    {e.motivo ? ` · ${e.motivo}` : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeExcepcion(e.fecha)}
+                    className="shrink-0 text-slate-400 transition hover:text-red-500"
+                    aria-label={`Quitar cierre del ${fmtFechaCorta(e.fecha)}`}
+                    title="Quitar"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -767,6 +930,7 @@ function ConfigSection({ value, onChange, tenant }) {
               onChange={setDraft}
               onSave={saveDraft}
               onCancel={cancelEdit}
+              onDelete={editIndex === 'new' ? null : deleteEditBox}
             />
           </div>
         )}
