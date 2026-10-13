@@ -11,18 +11,8 @@
 
 export default function AdminDashboard() {
   return (
-    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-3">
-      {/* Izquierda: pendiente */}
-      <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-6">
-        <p className="text-lg font-bold text-slate-800">Pendiente</p>
-        <p className="mt-2 text-sm text-slate-500">
-          Acá va el panel de administración: negocios, métricas globales y
-          respaldos. Todavía no está construido.
-        </p>
-      </section>
-
-      {/* Derecha: la fabula */}
-      <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:col-span-2">
+    <div className="mx-auto max-w-3xl">
+      <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
           Para leer mientras tanto
         </p>
