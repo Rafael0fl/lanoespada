@@ -134,14 +134,201 @@ function FranjasHorario({ value, onChange }) {
   )
 }
 
-function VerSection() {
+const DIA_KEYS = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab']
+const DIA_LABEL = { lun: 'Lun', mar: 'Mar', mie: 'Mié', jue: 'Jue', vie: 'Vie', sab: 'Sáb', dom: 'Dom' }
+
+function toISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function parseISO(iso) {
+  return new Date(`${iso}T12:00:00`) // mediodia: evita corrimientos por zona horaria
+}
+function addDays(d, n) {
+  const x = new Date(d)
+  x.setDate(x.getDate() + n)
+  return x
+}
+function diaKey(date) {
+  return DIA_KEYS[date.getDay()]
+}
+
+/* --------------------------------------------------------------------------
+ * VerSection: vista de agenda (solo lectura por ahora).
+ * Pildoras de box + tira semanal desde hoy + franjas del dia elegido.
+ * Cuando exista la tabla appointments, los bloques se reemplazan por el
+ * resultado de getSlots(box, fecha) sin tocar esta vista.
+ * ------------------------------------------------------------------------ */
+function VerSection({ boxes }) {
+  const hoy = new Date()
+  const hoyISO = toISO(hoy)
+
+  const [boxIdx, setBoxIdx] = useState(0)
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [fechaISO, setFechaISO] = useState(hoyISO)
+
+  if (!boxes || boxes.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+        <CalendarCheck className="h-12 w-12 text-slate-400" />
+        <p className="mt-3 text-base font-semibold text-slate-700">Todavía no hay boxes</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Crealos en la pestaña Configuración para ver la agenda.
+        </p>
+      </div>
+    )
+  }
+
+  const box = boxes[Math.min(boxIdx, boxes.length - 1)] ?? {}
+  const strip = Array.from({ length: 7 }, (_, i) => addDays(hoy, weekOffset * 7 + i))
+  const atiende = (date) =>
+    (box.franjas ?? []).some((f) => (f.dias ?? []).includes(diaKey(date)))
+  const franjasDelDia = (box.franjas ?? []).filter((f) =>
+    (f.dias ?? []).includes(diaKey(parseISO(fechaISO))),
+  )
+  const tituloFecha =
+    fechaISO === hoyISO
+      ? 'Hoy'
+      : parseISO(fechaISO).toLocaleDateString('es-AR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'numeric',
+        })
+
+  const moverSemana = (dir) => {
+    setWeekOffset((o) => o + dir)
+    setFechaISO((prev) => toISO(addDays(parseISO(prev), dir * 7)))
+  }
+  const irAHoy = () => {
+    setWeekOffset(0)
+    setFechaISO(hoyISO)
+  }
+  const saltarAFecha = (iso) => {
+    if (!iso) return
+    setFechaISO(iso)
+    const diff = Math.round((parseISO(iso) - parseISO(hoyISO)) / 86400000)
+    setWeekOffset(Math.floor(diff / 7))
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
-      <CalendarCheck className="h-12 w-12 text-slate-400" />
-      <p className="mt-3 text-base font-semibold text-slate-700">Vista de agenda pendiente</p>
-      <p className="mt-1 text-sm text-slate-500">
-        Esta sección está pendiente de terminarse. Se mostrará la grilla de turnos una vez definida la configuración de boxes.
-      </p>
+    <div className="space-y-4">
+      {/* Boxes */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {boxes.map((b, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => setBoxIdx(idx)}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
+              idx === Math.min(boxIdx, boxes.length - 1)
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {b.nombre || `Box #${idx + 1}`}
+          </button>
+        ))}
+      </div>
+
+      {/* Tira semanal */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => moverSemana(-1)}
+            className="rounded-lg px-2 py-1 text-lg font-bold text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Semana anterior"
+          >
+            ‹
+          </button>
+          <p className="text-sm font-semibold capitalize text-slate-700">
+            {strip[0].toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
+          </p>
+          <button
+            type="button"
+            onClick={() => moverSemana(1)}
+            className="rounded-lg px-2 py-1 text-lg font-bold text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Semana siguiente"
+          >
+            ›
+          </button>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {strip.map((date) => {
+            const iso = toISO(date)
+            const selected = iso === fechaISO
+            const esHoy = iso === hoyISO
+            return (
+              <button
+                key={iso}
+                type="button"
+                onClick={() => setFechaISO(iso)}
+                className={`flex flex-col items-center rounded-xl px-1 py-2 transition ${
+                  selected ? 'bg-brand-600 text-white shadow-sm' : 'hover:bg-slate-100'
+                }`}
+              >
+                <span className={`text-[11px] font-semibold ${selected ? 'text-white/80' : 'text-slate-400'}`}>
+                  {DIA_LABEL[diaKey(date)]}
+                </span>
+                <span className={`text-base font-bold ${selected ? '' : esHoy ? 'text-brand-700' : 'text-slate-800'}`}>
+                  {date.getDate()}
+                </span>
+                <span
+                  className={`mt-1 h-1.5 w-1.5 rounded-full ${atiende(date) ? 'bg-emerald-500' : selected ? 'bg-white/40' : 'bg-slate-200'}`}
+                  title={atiende(date) ? 'El box atiende este día' : 'El box no atiende este día'}
+                />
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={irAHoy}
+            className="text-xs font-semibold text-brand-700 transition hover:text-brand-800"
+          >
+            Volver a hoy
+          </button>
+          <input
+            type="date"
+            value={fechaISO}
+            onChange={(e) => saltarAFecha(e.target.value)}
+            className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600"
+            aria-label="Saltar a una fecha"
+          />
+        </div>
+      </div>
+
+      {/* Franjas del dia */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <p className="text-sm font-semibold capitalize text-slate-800">
+          {tituloFecha} · {box.nombre || 'Box'}
+        </p>
+        {franjasDelDia.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-400">Este box no atiende este día.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {franjasDelDia.map((f, i) => (
+              <li
+                key={i}
+                className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
+              >
+                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                  <Clock className="h-4 w-4 text-brand-600" />
+                  {f.start} – {f.end}
+                </span>
+                <span className="rounded-full bg-slate-200/70 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500">
+                  Sin turnos
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-3 text-[11px] text-slate-400">
+          La reserva manual y los turnos agendados por la IA aparecerán acá.
+        </p>
+      </div>
     </div>
   )
 }
@@ -409,7 +596,7 @@ export default function AgendaTurnos({ value, onChange, tenant }) {
         </div>
       </div>
 
-      {tab === 'ver' && <VerSection />}
+      {tab === 'ver' && <VerSection boxes={value?.boxes ?? []} />}
       {tab === 'config' && <ConfigSection value={value} onChange={onChange} tenant={tenant} />}
     </div>
   )
