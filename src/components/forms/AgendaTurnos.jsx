@@ -6,7 +6,7 @@
  *   - "Ver": por ahora mensaje "pendiente en terminarse"
  *   - "Configuración": Boxes (con layout horizontal de cards)
  * -------------------------------------------------------------------------- */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Boxes, CalendarCheck, Clock, Plus, Eye, Settings, Trash2, Wrench } from 'lucide-react'
 
 const inputClass =
@@ -152,19 +152,139 @@ function diaKey(date) {
   return DIA_KEYS[date.getDay()]
 }
 
+function uidReserva() {
+  return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+// "09:30" + 45 -> "10:15" (los strings HH:MM se comparan lexicograficamente).
+function sumarMinutos(hhmm, min) {
+  const [h, m] = String(hhmm).split(':').map(Number)
+  const t = h * 60 + m + (Number(min) || 0)
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
+}
+
+// Duracion del servicio en minutos (default 30 si no esta cargada).
+function duracionServicio(tenant, nombre) {
+  const list = tenant?.config?.servicio?.list ?? []
+  const d = Number(list.find((s) => s?.nombre === nombre)?.duracion_min)
+  return Number.isFinite(d) && d > 0 ? d : 30
+}
+
+/* --------------------------------------------------------------------------
+ * ReservaForm: alta manual de un turno dentro de una franja del dia.
+ * Valida: hora y cliente obligatorios, que entre en la franja segun la
+ * duracion del servicio, y que no se superponga con otra reserva del dia.
+ * ------------------------------------------------------------------------ */
+function ReservaForm({ franja, servicios, tenant, existentes, onSave, onCancel }) {
+  const [hora, setHora] = useState('')
+  const [servicio, setServicio] = useState(servicios[0] ?? '')
+  const [cliente, setCliente] = useState('')
+  const [error, setError] = useState('')
+
+  const guardar = () => {
+    if (!hora) {
+      setError('Elegí la hora del turno.')
+      return
+    }
+    if (!cliente.trim()) {
+      setError('Poné el nombre del cliente.')
+      return
+    }
+    const dur = duracionServicio(tenant, servicio)
+    const fin = sumarMinutos(hora, dur)
+    if (hora < franja.start || fin > franja.end) {
+      setError(`No entra en la franja (${franja.start}–${franja.end}) con ${dur} min de duración.`)
+      return
+    }
+    const choque = existentes.find((r) => {
+      const rFin = sumarMinutos(r.hora, Number(r.duracion_min) || 30)
+      return hora < rFin && r.hora < fin
+    })
+    if (choque) {
+      setError(`Se superpone con el turno de las ${choque.hora}${choque.cliente ? ` (${choque.cliente})` : ''}.`)
+      return
+    }
+    onSave({ id: uidReserva(), hora, duracion_min: dur, servicio, cliente: cliente.trim() })
+  }
+
+  return (
+    <div className="mt-2 rounded-xl border border-brand-200 bg-brand-50/50 p-3">
+      <div className="grid grid-cols-2 gap-2">
+        <label className="text-xs font-medium text-slate-500">
+          Hora
+          <input
+            type="time"
+            value={hora}
+            onChange={(e) => setHora(e.target.value)}
+            className={`${inputClass} mt-1`}
+          />
+        </label>
+        {servicios.length > 0 && (
+          <label className="text-xs font-medium text-slate-500">
+            Servicio
+            <select
+              value={servicio}
+              onChange={(e) => setServicio(e.target.value)}
+              className={`${inputClass} mt-1`}
+            >
+              {servicios.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+      <label className="mt-2 block text-xs font-medium text-slate-500">
+        Cliente
+        <input
+          type="text"
+          value={cliente}
+          onChange={(e) => setCliente(e.target.value)}
+          placeholder="Nombre del cliente"
+          className={`${inputClass} mt-1`}
+        />
+      </label>
+      {error !== '' && <p className="mt-1.5 text-xs text-rose-600">{error}</p>}
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={guardar}
+          className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+        >
+          Guardar reserva
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* --------------------------------------------------------------------------
  * VerSection: vista de agenda (solo lectura por ahora).
  * Pildoras de box + tira semanal desde hoy + franjas del dia elegido.
  * Cuando exista la tabla appointments, los bloques se reemplazan por el
  * resultado de getSlots(box, fecha) sin tocar esta vista.
  * ------------------------------------------------------------------------ */
-function VerSection({ boxes }) {
+function VerSection({ value, onChange, tenant }) {
+  const boxes = value?.boxes ?? []
   const hoy = new Date()
   const hoyISO = toISO(hoy)
 
   const [boxIdx, setBoxIdx] = useState(0)
   const [weekOffset, setWeekOffset] = useState(0)
   const [fechaISO, setFechaISO] = useState(hoyISO)
+  const [reservaEn, setReservaEn] = useState(null) // indice de franja con form abierto
+
+  // Al cambiar de dia o box se cierra el formulario de reserva.
+  useEffect(() => {
+    setReservaEn(null)
+  }, [fechaISO, boxIdx])
 
   if (!boxes || boxes.length === 0) {
     return (
@@ -178,7 +298,7 @@ function VerSection({ boxes }) {
     )
   }
 
-  const box = boxes[Math.min(boxIdx, boxes.length - 1)] ?? {}
+  const box = boxes[boxRealIdx] ?? {}
   const strip = Array.from({ length: 7 }, (_, i) => addDays(hoy, weekOffset * 7 + i))
   const atiende = (date) =>
     (box.franjas ?? []).some((f) => (f.dias ?? []).includes(diaKey(date)))
@@ -193,6 +313,31 @@ function VerSection({ boxes }) {
           day: 'numeric',
           month: 'numeric',
         })
+
+  const boxRealIdx = Math.min(boxIdx, boxes.length - 1)
+
+  const patchBox = (idx, patch) => {
+    const next = boxes.map((b, i) => (i === idx ? { ...b, ...patch } : b))
+    onChange({ ...(value ?? {}), boxes: next })
+  }
+
+  const agregarReserva = (reserva) => {
+    const box = boxes[boxRealIdx] ?? {}
+    patchBox(boxRealIdx, { reservas: [...(box.reservas ?? []), { ...reserva, fecha: fechaISO }] })
+    setReservaEn(null)
+  }
+
+  const eliminarReserva = (id) => {
+    const box = boxes[boxRealIdx] ?? {}
+    patchBox(boxRealIdx, { reservas: (box.reservas ?? []).filter((r) => r.id !== id) })
+  }
+
+  // Servicios ofrecibles en este box: los asignados, o todos si no asigno ninguno.
+  const serviciosBox = (boxes[boxRealIdx]?.servicios ?? []).filter(Boolean)
+  const serviciosTenant = (tenant?.config?.servicio?.list ?? [])
+    .map((s) => s?.nombre)
+    .filter(Boolean)
+  const serviciosElegibles = serviciosBox.length > 0 ? serviciosBox : serviciosTenant
 
   const moverSemana = (dir) => {
     setWeekOffset((o) => o + dir)
@@ -309,24 +454,89 @@ function VerSection({ boxes }) {
           <p className="mt-2 text-sm text-slate-400">Este box no atiende este día.</p>
         ) : (
           <ul className="mt-3 space-y-2">
-            {franjasDelDia.map((f, i) => (
-              <li
-                key={i}
-                className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
-              >
-                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-                  <Clock className="h-4 w-4 text-brand-600" />
-                  {f.start} – {f.end}
-                </span>
-                <span className="rounded-full bg-slate-200/70 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500">
-                  Sin turnos
-                </span>
-              </li>
-            ))}
+            {franjasDelDia.map((f, i) => {
+              const reservas = (box.reservas ?? [])
+                .filter(
+                  (r) =>
+                    r.fecha === fechaISO &&
+                    r.hora >= f.start &&
+                    sumarMinutos(r.hora, Number(r.duracion_min) || 30) <= f.end,
+                )
+                .sort((a, b) => (a.hora < b.hora ? -1 : 1))
+              return (
+                <li
+                  key={i}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                      <Clock className="h-4 w-4 text-brand-600" />
+                      {f.start} – {f.end}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                          reservas.length === 0
+                            ? 'bg-slate-200/70 text-slate-500'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {reservas.length === 0
+                          ? 'Sin turnos'
+                          : `${reservas.length} turno${reservas.length !== 1 ? 's' : ''}`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setReservaEn(reservaEn === i ? null : i)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-brand-500 hover:text-brand-700"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Reservar
+                      </button>
+                    </div>
+                  </div>
+
+                  {reservas.length > 0 && (
+                    <ul className="mt-2 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                      {reservas.map((r) => (
+                        <li key={r.id} className="flex items-center gap-2 px-3 py-2">
+                          <span className="shrink-0 text-sm font-bold text-slate-800">{r.hora}</span>
+                          <span className="min-w-0 flex-1 truncate text-sm text-slate-600">
+                            {r.cliente}
+                            {r.servicio ? ` · ${r.servicio}` : ''}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => eliminarReserva(r.id)}
+                            className="shrink-0 text-slate-400 transition hover:text-red-500"
+                            aria-label={`Eliminar reserva de ${r.cliente}`}
+                            title="Eliminar reserva"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {reservaEn === i && (
+                    <ReservaForm
+                      franja={f}
+                      servicios={serviciosElegibles}
+                      tenant={tenant}
+                      existentes={(box.reservas ?? []).filter((r) => r.fecha === fechaISO)}
+                      onSave={agregarReserva}
+                      onCancel={() => setReservaEn(null)}
+                    />
+                  )}
+                </li>
+              )
+            })}
           </ul>
         )}
         <p className="mt-3 text-[11px] text-slate-400">
-          La reserva manual y los turnos agendados por la IA aparecerán acá.
+          Acordate de guardar la feature para que las reservas queden registradas.
+          Los turnos agendados por la IA aparecerán acá.
         </p>
       </div>
     </div>
@@ -596,7 +806,7 @@ export default function AgendaTurnos({ value, onChange, tenant }) {
         </div>
       </div>
 
-      {tab === 'ver' && <VerSection boxes={value?.boxes ?? []} />}
+      {tab === 'ver' && <VerSection value={value} onChange={onChange} tenant={tenant} />}
       {tab === 'config' && <ConfigSection value={value} onChange={onChange} tenant={tenant} />}
     </div>
   )
