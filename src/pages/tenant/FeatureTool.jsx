@@ -22,6 +22,7 @@ import {
   FEATURE_CONTENT_SCHEMA,
   emptyFeatureContent,
   isFeatureEnabled,
+  migrarContenidoLegacy,
 } from '../../data/mockBackend'
 import { fetchTenant, updateTenant } from '../../services/api'
 
@@ -115,10 +116,10 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
   const [form, setForm] = useState(() =>
     scheduleField
       ? { [scheduleField.key]: initial ?? 'fulltime' }
-      : {
+      : migrarContenidoLegacy(feature.key, {
           ...emptyFeatureContent(feature.key),
           ...(initial ?? {}),
-        },
+        }),
   )
   const [saving, setSaving] = useState(false)
 

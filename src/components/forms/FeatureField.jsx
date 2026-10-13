@@ -21,7 +21,7 @@ import { BookOpen, Check, ChevronDown, Plus, Trash2 } from 'lucide-react'
 
 import AgendaTurnos from './AgendaTurnos'
 import PromoEventList from './PromoEventList'
-import { FEATURE_BY_KEY } from '../../data/mockBackend'
+import { FEATURE_BY_KEY, formatDuracion } from '../../data/mockBackend'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
@@ -328,7 +328,11 @@ function ObjectListField({ field, value, onChange }) {
   const sourceLabel = (key) => FEATURE_BY_KEY[key]?.label ?? key
 
   const requiredFilled = itemFields.every((f) =>
-    f.required ? String(draft[f.key] ?? '').trim() !== '' : true,
+    f.required
+      ? f.type === 'duration'
+        ? (Number(draft[f.key]) || 0) > 0
+        : String(draft[f.key] ?? '').trim() !== ''
+      : true,
   )
 
   const setDraftField = (key, next) => setDraft((prev) => ({ ...prev, [key]: next }))
@@ -337,10 +341,22 @@ function ObjectListField({ field, value, onChange }) {
     if (!requiredFilled) return
     const item = {}
     itemFields.forEach((f) => {
-      item[f.key] = String(draft[f.key] ?? '').trim()
+      // duration se guarda como minutos (int), no como texto.
+      item[f.key] = f.type === 'duration' ? (Number(draft[f.key]) || 0) : String(draft[f.key] ?? '').trim()
     })
     onChange([...items, item])
     setDraft({})
+  }
+
+  // Como se muestra un sub-campo en la vista expandida del item guardado.
+  const displayItemValue = (f, item) => {
+    if (f.type === 'duration') {
+      return (
+        formatDuracion(item[f.key]) ||
+        (f.legacyKey && item[f.legacyKey] ? String(item[f.legacyKey]) : '')
+      )
+    }
+    return String(item[f.key] ?? '').trim()
   }
 
   return (
@@ -361,6 +377,11 @@ function ObjectListField({ field, value, onChange }) {
                 onChange={(e) => setDraftField(f.key, e.target.value)}
                 placeholder={f.placeholder}
                 className={`${inputClass} resize-y`}
+              />
+            ) : f.type === 'duration' ? (
+              <DurationDraft
+                value={draft[f.key]}
+                onChange={(min) => setDraftField(f.key, min)}
               />
             ) : f.type === 'select' ? (
               <div>
@@ -462,7 +483,7 @@ function ObjectListField({ field, value, onChange }) {
                           {f.label}
                         </p>
                         <p className="whitespace-pre-line text-sm text-slate-600">
-                          {String(item[f.key] ?? '').trim() || '—'}
+                          {displayItemValue(f, item) || '—'}
                         </p>
                       </div>
                     ))}
@@ -473,6 +494,54 @@ function ObjectListField({ field, value, onChange }) {
           })}
         </ul>
       )}
+    </div>
+  )
+}
+
+/* --------------------------------------------------------------------------
+ * DurationDraft: editor de duracion en horas + minutos para el draft de un
+ * objectList. Guarda minutos totales (int). Minutos se acota a 0-59.
+ * ------------------------------------------------------------------------ */
+function DurationDraft({ value, onChange }) {
+  const total = Number(value) || 0
+  const horas = Math.floor(total / 60)
+  const minutos = total % 60
+
+  const set = (h, m) => onChange(h * 60 + m)
+
+  const numClass = `${inputClass} mt-1`
+  return (
+    <div>
+      <div className="flex gap-2">
+        <label className="flex-1 text-xs font-medium text-slate-500">
+          Horas
+          <input
+            type="number"
+            min="0"
+            max="12"
+            value={horas}
+            onChange={(e) => set(Math.max(0, Number(e.target.value) || 0), minutos)}
+            className={numClass}
+          />
+        </label>
+        <label className="flex-1 text-xs font-medium text-slate-500">
+          Minutos
+          <input
+            type="number"
+            min="0"
+            max="59"
+            value={minutos}
+            onChange={(e) => {
+              const m = Number(e.target.value) || 0
+              set(horas, Math.min(59, Math.max(0, m)))
+            }}
+            className={numClass}
+          />
+        </label>
+      </div>
+      <p className="mt-1 text-xs text-slate-400">
+        Total: {formatDuracion(total) || '—'}
+      </p>
     </div>
   )
 }

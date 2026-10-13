@@ -202,7 +202,7 @@ export const FEATURE_CONTENT_SCHEMA = {
           { key: 'descripcion', label: 'Descripción', type: 'textarea', placeholder: 'Detalle del servicio…', required: true },
           { key: 'precio', label: 'Precio ($)', type: 'number', placeholder: '15000', required: true },
           { key: 'profesional', label: 'Profesional', type: 'select', optionsSource: 'profesionales', optionsLabel: 'nombre', placeholder: 'Sin asignar' },
-          { key: 'duracion', label: 'Duración', type: 'text', placeholder: '45 minutos' },
+          { key: 'duracion_min', label: 'Duración', type: 'duration', legacyKey: 'duracion', required: true },
         ],
       },
     ],
@@ -258,6 +258,66 @@ export function emptyFeatureContent(featureKey) {
     else initial[field.key] = ''
   })
   return initial
+}
+
+/* --------------------------------------------------------------------------
+ * Duraciones: los campos `type: 'duration'` guardan MINUTOS totales (int).
+ * ------------------------------------------------------------------------ */
+
+// "90" -> "1 h 30 min" | "45" -> "45 min" | "60" -> "1 h" | invalido -> ''.
+export function formatDuracion(min) {
+  const total = Number(min)
+  if (!Number.isFinite(total) || total <= 0) return ''
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  if (h && m) return `${h} h ${m} min`
+  if (h) return `${h} h`
+  return `${m} min`
+}
+
+// Migracion best-effort de duraciones legacy en texto ("45 minutos") a minutos.
+// "45 minutos" -> 45 | "1 hora 30" / "1:30" -> 90 | ilegible -> null.
+export function parseLegacyDuration(text) {
+  const s = String(text ?? '').toLowerCase()
+  const reloj = s.match(/(\d+)\s*:\s*(\d+)/)
+  if (reloj) {
+    const total = Number(reloj[1]) * 60 + Number(reloj[2])
+    return total > 0 ? total : null
+  }
+  const nums = s.match(/\d+/g)?.map(Number) ?? []
+  if (!nums.length) return null
+  if (/hora|hs?\.?\b|h\b/.test(s)) {
+    const total = nums[0] * 60 + (nums[1] ?? 0)
+    return total > 0 ? total : null
+  }
+  return nums[0] > 0 ? nums[0] : null // sin unidad: se asumen minutos
+}
+
+// Migra el contenido guardado de una feature a la forma actual del schema
+// (ej: `duracion` texto -> `duracion_min` minutos). Lo ya guardado bien no
+// se toca; lo ilegible se conserva con su key legacy para no perder datos.
+export function migrarContenidoLegacy(featureKey, content) {
+  const schema = FEATURE_CONTENT_SCHEMA[featureKey]
+  if (!schema || !content || typeof content !== 'object') return content
+  const next = { ...content }
+  for (const field of schema.fields) {
+    if (field.type !== 'objectList' || !Array.isArray(next[field.key])) continue
+    next[field.key] = next[field.key].map((item) => {
+      if (!item || typeof item !== 'object') return item
+      let out = item
+      for (const f of field.itemFields ?? []) {
+        if (f.type === 'duration' && f.legacyKey && out[f.key] == null && out[f.legacyKey] != null) {
+          const min = parseLegacyDuration(out[f.legacyKey])
+          if (min) {
+            out = { ...out, [f.key]: min }
+            delete out[f.legacyKey]
+          }
+        }
+      }
+      return out
+    })
+  }
+  return next
 }
 
 // Usernames de los socios comerciales (para distinguir "míos"/"todos").
