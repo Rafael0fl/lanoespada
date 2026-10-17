@@ -183,7 +183,7 @@ function ReservaForm({ franja, servicios, tenant, existentes, fechaISO, hoyISO, 
   const [cliente, setCliente] = useState('')
   const [error, setError] = useState('')
 
-  const guardar = () => {
+  const guardar = async () => {
     if (!hora) {
       setError('Elegí la hora del turno.')
       return
@@ -210,7 +210,10 @@ function ReservaForm({ franja, servicios, tenant, existentes, fechaISO, hoyISO, 
       setError(`Se superpone con el turno de las ${choque.hora}${choque.cliente ? ` (${choque.cliente})` : ''}.`)
       return
     }
-    onSave({ id: uidReserva(), hora, duracion_min: dur, servicio, cliente: cliente.trim() })
+    const ok = await onSave({ id: uidReserva(), hora, duracion_min: dur, servicio, cliente: cliente.trim() })
+    if (!ok) {
+      setError('No se pudo guardar el turno. Intentá de nuevo.')
+    }
   }
 
   return (
@@ -360,8 +363,10 @@ function VerSection({ value, tenant }) {
       })
       refetchAppointments()
       setReservaEn(null)
+      return true
     } catch (err) {
       console.error('[AgendaTurnos] Error al crear turno:', err?.message || err)
+      return false
     }
   }
 
