@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react'
 import { Boxes, CalendarCheck, CalendarX, Clock, Plus, Eye, Settings, Trash2, Wrench } from 'lucide-react'
 
-import { cancelAppointment, createAppointment, fetchAppointments } from '../../services/api'
+import { cancelAppointment, createAppointment, fetchAppointments, updateTenant } from '../../services/api'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
@@ -890,7 +890,7 @@ function BoxEditForm({ box, onChange, onSave, onCancel, onDelete }) {
   )
 }
 
-function ConfigSection({ value, onChange, tenant }) {
+function ConfigSection({ value, onChange, tenant, tenantId }) {
   const config = value ?? {}
   const boxes = config.boxes ?? []
   const serviciosDisponibles = tenant?.config?.servicio?.list ?? []
@@ -920,28 +920,46 @@ function ConfigSection({ value, onChange, tenant }) {
     setEditIndex(null)
   }
 
-  const saveDraft = () => {
+  const saveDraft = async () => {
     const { _serviciosDisponibles, ...clean } = draft // eslint-disable-line no-unused-vars
     // Si ya hay franjas, el `horarios` texto legacy queda reemplazado.
     if ((clean.franjas ?? []).length > 0) delete clean.horarios
-    if (editIndex === 'new') {
-      update({ ...config, boxes: [...boxes, clean] })
-    } else {
-      const nextBoxes = boxes.map((b, i) => (i === editIndex ? clean : b))
-      update({ ...config, boxes: nextBoxes })
+    const nextBoxes =
+      editIndex === 'new'
+        ? [...boxes, clean]
+        : boxes.map((b, i) => (i === editIndex ? clean : b))
+    const nextConfig = { ...config, boxes: nextBoxes }
+    // Actualizar estado local del formulario.
+    update(nextConfig)
+    // Auto-guardar en el backend (o mock) para que el box exista sin
+    // necesidad de hacer click en "Guardar" manualmente.
+    if (tenantId) {
+      try {
+        await updateTenant(tenantId, { config: { agenda_turnos: nextConfig } })
+      } catch (err) {
+        console.error('[AgendaTurnos] Error al auto-guardar box:', err?.message || err)
+      }
     }
     cancelEdit()
   }
 
   const update = (next) => onChange(next)
 
-  const removeBox = (idx) => {
+  const removeBox = async (idx) => {
     const nextBoxes = boxes.filter((_, i) => i !== idx)
-    update({ ...config, boxes: nextBoxes })
+    const nextConfig = { ...config, boxes: nextBoxes }
+    update(nextConfig)
+    if (tenantId) {
+      try {
+        await updateTenant(tenantId, { config: { agenda_turnos: nextConfig } })
+      } catch (err) {
+        console.error('[AgendaTurnos] Error al auto-guardar eliminación de box:', err?.message || err)
+      }
+    }
   }
 
-  const deleteEditBox = () => {
-    if (editIndex !== 'new') removeBox(editIndex)
+  const deleteEditBox = async () => {
+    if (editIndex !== 'new') await removeBox(editIndex)
     cancelEdit()
   }
 
@@ -1055,7 +1073,7 @@ export default function AgendaTurnos({ value, onChange, tenant }) {
       </div>
 
       {tab === 'ver' && <VerSection value={value} tenant={tenant} />}
-      {tab === 'config' && <ConfigSection value={value} onChange={onChange} tenant={tenant} />}
+      {tab === 'config' && <ConfigSection value={value} onChange={onChange} tenant={tenant} tenantId={tenant?.id ?? ''} />}
     </div>
   )
 }
