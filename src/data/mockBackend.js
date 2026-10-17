@@ -393,6 +393,103 @@ function sumarMinutosMock(hhmm, minutos) {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
+// ==========================================================================
+//  APPOINTMENTS (turnos agendados) — pseudo-DB
+// ==========================================================================
+// Los turnos se guardan en box.reservas dentro de config.agenda_turnos.
+// Estas funciones imitan el backend (listar, crear, cancelar).
+
+export function listAppointments({ tenantId, fecha, box }) {
+  const tenant = dbTenants.find((t) => t.id === tenantId)
+  if (!tenant) return []
+  const boxes = tenant.config?.agenda_turnos?.boxes || []
+  const targetBoxes = box ? boxes.filter((b) => b.nombre === box) : boxes
+  const result = []
+  for (const b of targetBoxes) {
+    for (const r of b.reservas || []) {
+      if (r.estado === 'cancelado') continue
+      if (fecha && r.fecha !== fecha) continue
+      result.push({
+        id: r.id,
+        box: b.nombre,
+        servicio: r.servicio || '',
+        cliente: r.cliente || '',
+        fecha: r.fecha,
+        hora: r.hora,
+        duracion_min: r.duracion_min || 30,
+        hora_fin: r.hora_fin || sumarMinutosMock(r.hora, r.duracion_min || 30),
+        estado: r.estado || 'reservado',
+        origen: r.origen || 'manual',
+      })
+    }
+  }
+  return result.sort((a, b) => (a.hora < b.hora ? -1 : 1))
+}
+
+export function createAppointment({ tenantId, box, servicio, cliente, fecha, hora, duracion_min, duracionMin, origen }) {
+  const duracionMinFinal = duracion_min || duracionMin || 30
+  const tenant = dbTenants.find((t) => t.id === tenantId)
+  if (!tenant) return null
+  const boxes = tenant.config?.agenda_turnos?.boxes || []
+  const targetBox = boxes.find((b) => b.nombre === box)
+  if (!targetBox) return null
+
+  const reservas = targetBox.reservas || []
+  const horaFin = sumarMinutosMock(hora, duracionMinFinal)
+
+  // Verificar solapamiento.
+  for (const r of reservas) {
+    if (r.estado === 'cancelado' || r.fecha !== fecha) continue
+    const rFin = r.hora_fin || sumarMinutosMock(r.hora, r.duracion_min || 30)
+    if (hora < rFin && r.hora < horaFin) {
+      throw new Error('El slot se superpone con un turno existente.')
+    }
+  }
+
+  const appt = {
+    id: crypto.randomUUID(),
+    box,
+    servicio: servicio || '',
+    cliente,
+    fecha,
+    hora,
+    duracion_min: duracionMinFinal,
+    hora_fin: horaFin,
+    estado: 'reservado',
+    origen: origen || 'manual',
+    created_at: new Date().toISOString(),
+  }
+
+  if (!targetBox.reservas) targetBox.reservas = []
+  targetBox.reservas.push(appt)
+  return appt
+}
+
+export function cancelAppointment({ tenantId, appointmentId }) {
+  const tenant = dbTenants.find((t) => t.id === tenantId)
+  if (!tenant) return null
+  const boxes = tenant.config?.agenda_turnos?.boxes || []
+  for (const b of boxes) {
+    const r = (b.reservas || []).find((x) => x.id === appointmentId)
+    if (r) {
+      r.estado = 'cancelado'
+      return {
+        id: r.id,
+        box: b.nombre,
+        servicio: r.servicio || '',
+        cliente: r.cliente || '',
+        fecha: r.fecha,
+        hora: r.hora,
+        duracion_min: r.duracion_min || 30,
+        hora_fin: r.hora_fin || sumarMinutosMock(r.hora, r.duracion_min || 30),
+        estado: 'cancelado',
+        origen: r.origen || 'manual',
+      }
+    }
+  }
+  return null
+}
+
 // Usernames de los socios comerciales (para distinguir "míos"/"todos").
 // Deben coincidir con DEMO_ACCOUNTS de mockData.js (formato: nombre@socio).
 const SOCIOS = [

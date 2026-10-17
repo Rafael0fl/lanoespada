@@ -351,7 +351,7 @@ function VerSection({ value, tenant }) {
         cliente: reserva.cliente,
         fecha: fechaISO,
         hora: reserva.hora,
-        duracionMin: reserva.duracion_min || 30,
+        duracion_min: reserva.duracion_min || 30,
         origen: 'manual',
       })
       refetchAppointments()
