@@ -303,6 +303,7 @@ function VerSection({ value, tenant }) {
     fetchAppointments(tenantId, fechaISO, box.nombre)
       .then((res) => {
         if (!alive) return
+        console.log('[AgendaTurnos] fetchAppointments', { tenantId, fechaISO, box: box.nombre, data: res.data })
         setAppointments(res.data || [])
       })
       .catch(() => {
@@ -343,16 +344,10 @@ function VerSection({ value, tenant }) {
           month: 'numeric',
         })
 
-  const refetchAppointments = () => {
-    if (!tenantId || !box?.nombre) return
-    fetchAppointments(tenantId, fechaISO, box.nombre)
-      .then((res) => setAppointments(res.data || []))
-      .catch(() => {})
-  }
-
   const agregarReserva = async (reserva) => {
+    console.log('[AgendaTurnos] agregarReserva', { tenantId, box: box?.nombre, fechaISO, reserva })
     try {
-      await createAppointment(tenantId, {
+      const result = await createAppointment(tenantId, {
         box: box.nombre,
         servicio: reserva.servicio || '',
         cliente: reserva.cliente,
@@ -361,6 +356,7 @@ function VerSection({ value, tenant }) {
         duracionMin: reserva.duracion_min || 30,
         origen: 'manual',
       })
+      console.log('[AgendaTurnos] createAppointment result', result)
       refetchAppointments()
       setReservaEn(null)
       return true
@@ -368,6 +364,19 @@ function VerSection({ value, tenant }) {
       console.error('[AgendaTurnos] Error al crear turno:', err?.message || err)
       return false
     }
+  }
+
+  const refetchAppointments = () => {
+    if (!tenantId || !box?.nombre) return
+    fetchAppointments(tenantId, fechaISO, box.nombre)
+      .then((res) => {
+        console.log('[AgendaTurnos] refetch result', res)
+        setAppointments(res.data || [])
+      })
+      .catch((err) => {
+        console.error('[AgendaTurnos] refetch error', err?.message || err)
+        setAppointments([])
+      })
   }
 
   const eliminarReserva = async (id) => {
