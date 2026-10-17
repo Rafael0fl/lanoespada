@@ -320,6 +320,79 @@ export function migrarContenidoLegacy(featureKey, content) {
   return next
 }
 
+// Calcula los slots libres de un box para una fecha y duración de servicio.
+// Reimplementa la lógica del backend en el pseudo-DB para poder probar sin
+// encender el servidor (y para que la IA pueda consultar disponibilidad).
+export function getDisponibilidad({ tenantId, box, fecha, duracionMin = 30 }) {
+  const tenant = dbTenants.find((t) => t.id === tenantId)
+  if (!tenant) return []
+  const config = tenant.config || {}
+  const agenda = config.agenda_turnos || {}
+  const boxes = agenda.boxes || []
+  const boxData = boxes.find((b) => b.nombre === box)
+  if (!boxData) return []
+
+  // Días de la semana en español (igual que el backend).
+  const DIAS = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab']
+  const fechaObj = new Date(`${fecha}T12:00:00`)
+  const dia = DIAS[fechaObj.getDay()]
+
+  // Verificar excepciones (días cerrados del box).
+  for (const exc of boxData.excepciones || []) {
+    if (exc.desde <= fecha && fecha <= exc.hasta) return []
+  }
+
+  const franjas = (boxData.franjas || []).filter((f) => (f.dias || []).includes(dia))
+
+  // Turnos ocupados del box para esa fecha.
+  const reservas = (boxData.reservas || []).filter((r) => r.fecha === fecha && r.estado !== 'cancelado')
+
+  const slots = []
+  const vistos = new Set()
+
+  for (const franja of franjas) {
+    const start = franja.start || ''
+    const end = franja.end || ''
+    if (!start || !end || start >= end) continue
+
+    const [hS, mS] = start.split(':').map(Number)
+    const [hE, mE] = end.split(':').map(Number)
+    let cursor = hS * 60 + mS
+    const finFranja = hE * 60 + mE
+
+    while (cursor + duracionMin <= finFranja) {
+      const hh = `${String(Math.floor(cursor / 60)).padStart(2, '0')}:${String(cursor % 60).padStart(2, '0')}`
+      const cursorFin = cursor + duracionMin
+      const hhFin = `${String(Math.floor(cursorFin / 60)).padStart(2, '0')}:${String(cursorFin % 60).padStart(2, '0')}`
+
+      // Verificar solapamiento con turnos ocupados.
+      let choca = false
+      for (const r of reservas) {
+        const rFin = sumarMinutosMock(r.hora, r.duracion_min || 30)
+        if (hh < rFin && r.hora < hhFin) {
+          choca = true
+          break
+        }
+      }
+
+      if (!choca && !vistos.has(hh)) {
+        slots.push(hh)
+        vistos.add(hh)
+      }
+
+      cursor += 5
+    }
+  }
+
+  return slots
+}
+
+function sumarMinutosMock(hhmm, minutos) {
+  const [h, m] = String(hhmm).split(':').map(Number)
+  const total = h * 60 + m + (Number(minutos) || 0)
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+
 // Usernames de los socios comerciales (para distinguir "míos"/"todos").
 // Deben coincidir con DEMO_ACCOUNTS de mockData.js (formato: nombre@socio).
 const SOCIOS = [
