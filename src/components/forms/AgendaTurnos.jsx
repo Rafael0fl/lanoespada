@@ -837,11 +837,10 @@ function ConfigSection({ value, onChange, tenant }) {
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
           <Settings className="h-4 w-4 text-brand-600" />
-          General de la agenda
+          Días cerrados (feriados, vacaciones)
         </div>
 
         <div className="mt-4">
-          <p className="text-xs font-medium text-slate-500">Días cerrados (feriados, vacaciones)</p>
           <div className="mt-2 flex flex-wrap items-center gap-4">
             <div className="flex flex-col items-center gap-1">
               <label className="text-[10px] font-medium text-slate-500 text-center">
