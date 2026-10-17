@@ -250,6 +250,38 @@ export function sendMessage(tenantId, customerId, text) {
 
 /* ------------------------------ METRICS ---------------------------------- */
 
+// Disponibilidad de un box para una fecha y duración de servicio.
+export function fetchDisponibilidad({ tenantId, box, fecha, duracionMin = 30 }) {
+  const qs = `?box=${encodeURIComponent(box)}&fecha=${encodeURIComponent(fecha)}&duracion_min=${encodeURIComponent(duracionMin)}`
+  return withFallback(
+    () => request(`/tenants/${encodeURIComponent(tenantId)}/disponibilidad${qs}`),
+    () => mock.getDisponibilidad({ tenantId, box, fecha, duracionMin }),
+  )
+}
+
+// Appointments (turnos agendados) del tenant.
+export function fetchAppointments(tenantId, fecha, box) {
+  const qs = `?fecha=${encodeURIComponent(fecha)}${box ? `&box=${encodeURIComponent(box)}` : ''}`
+  return withFallback(
+    () => request(`/tenants/${encodeURIComponent(tenantId)}/appointments${qs}`),
+    () => mock.listAppointments({ tenantId, fecha, box }),
+  )
+}
+
+export function createAppointment(tenantId, payload) {
+  return withFallback(
+    () => request(`/tenants/${encodeURIComponent(tenantId)}/appointments`, { method: 'POST', body: payload }),
+    () => mock.createAppointment({ tenantId, ...payload }),
+  )
+}
+
+export function cancelAppointment(tenantId, appointmentId) {
+  return withFallback(
+    () => request(`/tenants/${encodeURIComponent(tenantId)}/appointments/${encodeURIComponent(appointmentId)}`, { method: 'DELETE' }),
+    () => mock.cancelAppointment({ tenantId, appointmentId }),
+  )
+}
+
 // scope: 'mios' | 'todos' |  range: 'hoy' | 'semana' | 'mes' | 'anio'
 export function fetchMetrics({ scope = 'todos', socio = '', range = 'mes' } = {}) {
   const qs = `?scope=${encodeURIComponent(scope)}&socio=${encodeURIComponent(socio)}&alcance=${encodeURIComponent(range)}`
