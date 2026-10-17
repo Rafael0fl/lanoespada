@@ -277,12 +277,6 @@ function ReservaForm({ franja, servicios, tenant, existentes, fechaISO, hoyISO, 
  * ------------------------------------------------------------------------ */
 function VerSection({ value, onChange, tenant }) {
   const boxes = value?.boxes ?? []
-  const excepciones = (value?.excepciones ?? []).map((e) => ({
-    id: e.id ?? `exc-legacy`,
-    desde: e.desde ?? e.fecha ?? '',
-    hasta: e.hasta ?? e.fecha ?? '',
-    motivo: e.motivo ?? '',
-  }))
   const hoy = new Date()
   const hoyISO = toISO(hoy)
   const ahoraHHMM = `${String(hoy.getHours()).padStart(2, '0')}:${String(hoy.getMinutes()).padStart(2, '0')}`
@@ -307,9 +301,9 @@ function VerSection({ value, onChange, tenant }) {
   const boxRealIdx = Math.min(boxIdx, boxes.length - 1)
   const box = boxes[boxRealIdx] ?? {}
   const enRango = (iso, desde, hasta) => iso >= desde && iso <= hasta
-  const excepcionDelDia = excepciones.find((e) => enRango(fechaISO, e.desde, e.hasta))
+  const excepcionDelDia = (box.excepciones ?? []).find((e) => enRango(fechaISO, e.desde, e.hasta))
   const esPasado = fechaISO < hoyISO
-  const excepcionDe = (date) => excepciones.find((e) => enRango(toISO(date), e.desde, e.hasta))
+  const excepcionDe = (date) => (box.excepciones ?? []).find((e) => enRango(toISO(date), e.desde, e.hasta))
   const strip = Array.from({ length: 7 }, (_, i) => addDays(hoy, weekOffset * 7 + i))
   const atiende = (date) =>
     (box.franjas ?? []).some((f) => (f.dias ?? []).includes(diaKey(date)))
@@ -586,6 +580,56 @@ function VerSection({ value, onChange, tenant }) {
 
 function BoxEditForm({ box, onChange, onSave, onCancel, onDelete }) {
   const [confirmaEliminar, setConfirmaEliminar] = useState(false)
+  const [excDesde, setExcDesde] = useState('')
+  const [excHasta, setExcHasta] = useState('')
+  const [excMotivo, setExcMotivo] = useState('')
+
+  const boxExcepciones = box.excepciones ?? []
+
+  const saveExcepciones = (lista) => {
+    onChange({ ...box, excepciones: lista })
+  }
+
+  const addExcepcion = () => {
+    if (!excDesde || !excHasta) return
+    if (excDesde > excHasta) {
+      setExcDesde('')
+      setExcHasta('')
+      return
+    }
+    if (
+      boxExcepciones.some((e) => e.desde <= excHasta && excDesde <= e.hasta) // solapamiento
+    ) {
+      return
+    }
+    saveExcepciones([
+      ...boxExcepciones,
+      {
+        id: crypto.randomUUID(),
+        desde: excDesde,
+        hasta: excHasta,
+        motivo: excMotivo.trim(),
+      },
+    ])
+    setExcDesde('')
+    setExcHasta('')
+    setExcMotivo('')
+  }
+
+  const removeExcepcion = (id) => {
+    saveExcepciones(boxExcepciones.filter((e) => e.id !== id))
+  }
+
+  const fmtFechaCorta = (iso) => {
+    const [y, m, d] = String(iso).split('-')
+    return `${d}/${m}/${y}`
+  }
+  const fmtRango = (desde, hasta) => {
+    if (!desde || !hasta) return ''
+    if (desde === hasta) return fmtFechaCorta(desde)
+    return `${fmtFechaCorta(desde)} al ${fmtFechaCorta(hasta)}`
+  }
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -661,6 +705,85 @@ function BoxEditForm({ box, onChange, onSave, onCancel, onDelete }) {
         </div>
       </div>
 
+      {/* ---- Días cerrados de este box ---- */}
+      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-3">
+          <CalendarX className="h-4 w-4 text-slate-500" />
+          Días cerrados de este box
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-4">
+          <div className="flex flex-col items-center gap-1">
+            <label className="text-[10px] font-medium text-slate-500 text-center">
+              Desde
+            </label>
+            <input
+              type="date"
+              value={excDesde}
+              onChange={(e) => setExcDesde(e.target.value)}
+              className="w-[150px] rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+              aria-label="Fecha desde"
+            />
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <label className="text-[10px] font-medium text-slate-500 text-center">
+              Hasta
+            </label>
+            <input
+              type="date"
+              value={excHasta}
+              onChange={(e) => setExcHasta(e.target.value)}
+              className="w-[150px] rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+              aria-label="Fecha hasta"
+            />
+          </div>
+          <div className="flex flex-col items-center gap-1 min-w-[140px]">
+            <label className="text-[10px] font-medium text-slate-500 text-center">
+              Motivo
+            </label>
+            <input
+              type="text"
+              value={excMotivo}
+              onChange={(e) => setExcMotivo(e.target.value)}
+              placeholder="Motivo (ej: Feriado)"
+              className="w-[180px] rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={addExcepcion}
+            disabled={!excDesde || !excHasta}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" />
+            Añadir
+          </button>
+        </div>
+        {boxExcepciones.length > 0 && (
+          <ul className="mt-2 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            {boxExcepciones.map((e) => (
+              <li key={e.id} className="flex items-center gap-2 px-3 py-2">
+                <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
+                  {fmtRango(e.desde, e.hasta)}
+                  {e.motivo ? ` · ${e.motivo}` : ''}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeExcepcion(e.id)}
+                  className="shrink-0 text-slate-400 transition hover:text-red-500"
+                  aria-label={`Quitar cierre del ${fmtRango(e.desde, e.hasta)}`}
+                  title="Quitar"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-2 text-[11px] text-slate-400">
+          Los días cerrados de este box se respetan en la vista de agenda.
+        </p>
+      </div>
+
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         {onDelete &&
           (confirmaEliminar ? (
@@ -725,17 +848,6 @@ function ConfigSection({ value, onChange, tenant }) {
 
   const [editIndex, setEditIndex] = useState(null)
   const [draft, setDraft] = useState(null)
-  const [excepciones, setExcepciones] = useState(
-    (config.excepciones ?? []).map((e) => ({
-      id: e.id ?? crypto.randomUUID(),
-      desde: e.desde ?? e.fecha ?? '',
-      hasta: e.hasta ?? e.fecha ?? '',
-      motivo: e.motivo ?? '',
-    }))
-  )
-  const [excDesde, setExcDesde] = useState('')
-  const [excHasta, setExcHasta] = useState('')
-  const [excMotivo, setExcMotivo] = useState('')
 
   const startAdd = () => {
     setDraft({ nombre: '', franjas: [], servicios: [], _serviciosDisponibles: serviciosDisponibles })
@@ -784,134 +896,8 @@ function ConfigSection({ value, onChange, tenant }) {
     cancelEdit()
   }
 
-  const saveExcepciones = (lista) => {
-    setExcepciones(lista)
-    update({ ...config, excepciones: lista })
-  }
-
-  const addExcepcion = () => {
-    if (!excDesde || !excHasta) return
-    if (excDesde > excHasta) {
-      setExcDesde('')
-      setExcHasta('')
-      return
-    }
-    if (
-      excepciones.some((e) => e.desde <= excHasta && excDesde <= e.hasta) // solapamiento
-    ) {
-      return
-    }
-    const lista = [
-      ...excepciones,
-      {
-        id: crypto.randomUUID(),
-        desde: excDesde,
-        hasta: excHasta,
-        motivo: excMotivo.trim(),
-      },
-    ]
-    saveExcepciones(lista)
-    setExcDesde('')
-    setExcHasta('')
-    setExcMotivo('')
-  }
-
-  const removeExcepcion = (id) => {
-    saveExcepciones(excepciones.filter((e) => e.id !== id))
-  }
-
-  const fmtFechaCorta = (iso) => {
-    const [y, m, d] = String(iso).split('-')
-    return `${d}/${m}/${y}`
-  }
-
-  const fmtRango = (desde, hasta) => {
-    if (!desde || !hasta) return ''
-    if (desde === hasta) return fmtFechaCorta(desde)
-    return `${fmtFechaCorta(desde)} al ${fmtFechaCorta(hasta)}`
-  }
-
   return (
     <div className="space-y-6">
-      {/* ---- Configuracion general ---- */}
-      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-          <Settings className="h-4 w-4 text-brand-600" />
-          Días cerrados (feriados, vacaciones)
-        </div>
-
-        <div className="mt-4">
-          <div className="mt-2 flex flex-wrap items-center gap-4">
-            <div className="flex flex-col items-center gap-1">
-              <label className="text-[10px] font-medium text-slate-500 text-center">
-                Desde
-              </label>
-              <input
-                type="date"
-                value={excDesde}
-                onChange={(e) => setExcDesde(e.target.value)}
-                className="w-[150px] rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-                aria-label="Fecha desde"
-              />
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <label className="text-[10px] font-medium text-slate-500 text-center">
-                Hasta
-              </label>
-              <input
-                type="date"
-                value={excHasta}
-                onChange={(e) => setExcHasta(e.target.value)}
-                className="w-[150px] rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-                aria-label="Fecha hasta"
-              />
-            </div>
-            <div className="flex flex-col items-center gap-1 min-w-[140px]">
-              <label className="text-[10px] font-medium text-slate-500 text-center">
-                Motivo
-              </label>
-              <input
-                type="text"
-                value={excMotivo}
-                onChange={(e) => setExcMotivo(e.target.value)}
-                placeholder="Motivo (ej: Feriado)"
-                className="w-[180px] rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={addExcepcion}
-              disabled={!excDesde || !excHasta}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" />
-              Añadir
-            </button>
-          </div>
-          {excepciones.length > 0 && (
-            <ul className="mt-2 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
-              {excepciones.map((e) => (
-                <li key={e.id} className="flex items-center gap-2 px-3 py-2">
-                  <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
-                    {fmtRango(e.desde, e.hasta)}
-                    {e.motivo ? ` · ${e.motivo}` : ''}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeExcepcion(e.id)}
-                    className="shrink-0 text-slate-400 transition hover:text-red-500"
-                    aria-label={`Quitar cierre del ${fmtRango(e.desde, e.hasta)}`}
-                    title="Quitar"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
-
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
