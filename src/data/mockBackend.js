@@ -252,6 +252,7 @@ export function emptyFeatureContent(featureKey) {
   if (!schema) return {}
   const initial = {}
   schema.fields.forEach((field) => {
+    if (field.type === 'custom') return // AgendaTurnos maneja su propio estado
     if (['objectList', 'stringList', 'dynamicList', 'multiselect', 'promoEventList'].includes(field.type)) initial[field.key] = []
     else if (field.type === 'checkbox') initial[field.key] = false
     else if (field.type === 'schedule') initial[field.key] = 'fulltime'

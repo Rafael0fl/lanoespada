@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save, AlertTriangle, Wrench } from 'lucide-react'
 
+import AgendaTurnos from '../../components/forms/AgendaTurnos'
 import FeatureField from '../../components/forms/FeatureField'
 import ScheduleForm from '../../components/forms/ScheduleForm'
 import DemoBanner from '../../components/ui/DemoBanner'
@@ -189,11 +190,19 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
                   {field.label}
                 </label>
               )}
-              <FeatureField
-                field={['custom', 'objectList'].includes(field.type) ? { ...field, _tenant: tenant } : field}
-                value={form[field.key]}
-                onChange={(next) => setForm((prev) => ({ ...prev, [field.key]: next }))}
-              />
+              {field.type === 'custom' && field.component === 'AgendaTurnos' ? (
+                <AgendaTurnos
+                  value={form}
+                  onChange={setForm}
+                  tenant={tenant}
+                />
+              ) : (
+                <FeatureField
+                  field={['custom', 'objectList'].includes(field.type) ? { ...field, _tenant: tenant } : field}
+                  value={form[field.key]}
+                  onChange={(next) => setForm((prev) => ({ ...prev, [field.key]: next }))}
+                />
+              )}
             </div>
           ))}
         </div>
