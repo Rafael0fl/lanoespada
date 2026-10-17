@@ -87,12 +87,12 @@ function FranjasHorario({ value, onChange }) {
                 )
               })}
             </div>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2 min-w-0">
               <input
                 type="time"
                 value={f.start ?? ''}
                 onChange={(e) => patch(idx, { ...f, start: e.target.value })}
-                className={inputClass}
+                className={`${inputClass.replace('w-full ', '').replace('w-full', '')} shrink-0 max-w-xs`}
                 aria-label="Hora de inicio"
               />
               <span className="shrink-0 text-sm text-slate-400">→</span>
@@ -100,7 +100,7 @@ function FranjasHorario({ value, onChange }) {
                 type="time"
                 value={f.end ?? ''}
                 onChange={(e) => patch(idx, { ...f, end: e.target.value })}
-                className={inputClass}
+                className={`${inputClass.replace('w-full ', '').replace('w-full', '')} shrink-0 max-w-xs`}
                 aria-label="Hora de fin"
               />
               <button
