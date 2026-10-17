@@ -277,7 +277,12 @@ function ReservaForm({ franja, servicios, tenant, existentes, fechaISO, hoyISO, 
  * ------------------------------------------------------------------------ */
 function VerSection({ value, onChange, tenant }) {
   const boxes = value?.boxes ?? []
-  const excepciones = value?.excepciones ?? []
+  const excepciones = (value?.excepciones ?? []).map((e) => ({
+    id: e.id ?? `exc-legacy`,
+    desde: e.desde ?? e.fecha ?? '',
+    hasta: e.hasta ?? e.fecha ?? '',
+    motivo: e.motivo ?? '',
+  }))
   const hoy = new Date()
   const hoyISO = toISO(hoy)
   const ahoraHHMM = `${String(hoy.getHours()).padStart(2, '0')}:${String(hoy.getMinutes()).padStart(2, '0')}`
@@ -301,9 +306,10 @@ function VerSection({ value, onChange, tenant }) {
 
   const boxRealIdx = Math.min(boxIdx, boxes.length - 1)
   const box = boxes[boxRealIdx] ?? {}
-  const excepcionDelDia = excepciones.find((e) => e.fecha === fechaISO)
+  const enRango = (iso, desde, hasta) => iso >= desde && iso <= hasta
+  const excepcionDelDia = excepciones.find((e) => enRango(fechaISO, e.desde, e.hasta))
   const esPasado = fechaISO < hoyISO
-  const excepcionDe = (date) => excepciones.find((e) => e.fecha === toISO(date))
+  const excepcionDe = (date) => excepciones.find((e) => enRango(toISO(date), e.desde, e.hasta))
   const strip = Array.from({ length: 7 }, (_, i) => addDays(hoy, weekOffset * 7 + i))
   const atiende = (date) =>
     (box.franjas ?? []).some((f) => (f.dias ?? []).includes(diaKey(date)))
@@ -717,11 +723,19 @@ function ConfigSection({ value, onChange, tenant }) {
   const boxes = config.boxes ?? []
   const serviciosDisponibles = tenant?.config?.servicio?.list ?? []
   const step = config.slot_step_minutes ?? 15
-  const excepciones = config.excepciones ?? []
 
   const [editIndex, setEditIndex] = useState(null)
   const [draft, setDraft] = useState(null)
-  const [excFecha, setExcFecha] = useState('')
+  const [excepciones, setExcepciones] = useState(
+    (config.excepciones ?? []).map((e) => ({
+      id: e.id ?? crypto.randomUUID(),
+      desde: e.desde ?? e.fecha ?? '',
+      hasta: e.hasta ?? e.fecha ?? '',
+      motivo: e.motivo ?? '',
+    }))
+  )
+  const [excDesde, setExcDesde] = useState('')
+  const [excHasta, setExcHasta] = useState('')
   const [excMotivo, setExcMotivo] = useState('')
 
   const startAdd = () => {
@@ -771,21 +785,51 @@ function ConfigSection({ value, onChange, tenant }) {
     cancelEdit()
   }
 
+  const saveExcepciones = (lista) => {
+    setExcepciones(lista)
+    update({ ...config, excepciones: lista })
+  }
+
   const addExcepcion = () => {
-    if (!excFecha) return
-    if (excepciones.some((e) => e.fecha === excFecha)) return
-    update({ ...config, excepciones: [...excepciones, { fecha: excFecha, motivo: excMotivo.trim() }] })
-    setExcFecha('')
+    if (!excDesde || !excHasta) return
+    if (excDesde > excHasta) {
+      setExcDesde('')
+      setExcHasta('')
+      return
+    }
+    if (
+      excepciones.some((e) => e.desde <= excHasta && excDesde <= e.hasta) // solapamiento
+    ) {
+      return
+    }
+    const lista = [
+      ...excepciones,
+      {
+        id: crypto.randomUUID(),
+        desde: excDesde,
+        hasta: excHasta,
+        motivo: excMotivo.trim(),
+      },
+    ]
+    saveExcepciones(lista)
+    setExcDesde('')
+    setExcHasta('')
     setExcMotivo('')
   }
 
-  const removeExcepcion = (fecha) => {
-    update({ ...config, excepciones: excepciones.filter((e) => e.fecha !== fecha) })
+  const removeExcepcion = (id) => {
+    saveExcepciones(excepciones.filter((e) => e.id !== id))
   }
 
   const fmtFechaCorta = (iso) => {
     const [y, m, d] = String(iso).split('-')
     return `${d}/${m}/${y}`
+  }
+
+  const fmtRango = (desde, hasta) => {
+    if (!desde || !hasta) return ''
+    if (desde === hasta) return fmtFechaCorta(desde)
+    return `${fmtFechaCorta(desde)} al ${fmtFechaCorta(hasta)}`
   }
 
   return (
@@ -820,24 +864,33 @@ function ConfigSection({ value, onChange, tenant }) {
         <div className="mt-4">
           <p className="text-xs font-medium text-slate-500">Días cerrados (feriados, vacaciones)</p>
           <div className="mt-2 flex flex-wrap gap-2">
+            <label className="text-xs font-medium text-slate-500 shrink-0">Desde</label>
             <input
               type="date"
-              value={excFecha}
-              onChange={(e) => setExcFecha(e.target.value)}
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-              aria-label="Fecha cerrada"
+              value={excDesde}
+              onChange={(e) => setExcDesde(e.target.value)}
+              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 max-w-[150px] shrink-0"
+              aria-label="Fecha desde"
+            />
+            <label className="text-xs font-medium text-slate-500 shrink-0">Hasta</label>
+            <input
+              type="date"
+              value={excHasta}
+              onChange={(e) => setExcHasta(e.target.value)}
+              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 max-w-[150px] shrink-0"
+              aria-label="Fecha hasta"
             />
             <input
               type="text"
               value={excMotivo}
               onChange={(e) => setExcMotivo(e.target.value)}
               placeholder="Motivo (ej: Feriado)"
-              className="min-w-40 flex-1 rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+              className="flex-1 rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 min-w-[140px]"
             />
             <button
               type="button"
               onClick={addExcepcion}
-              disabled={!excFecha}
+              disabled={!excDesde || !excHasta}
               className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
             >
               <Plus className="h-4 w-4" />
@@ -847,16 +900,16 @@ function ConfigSection({ value, onChange, tenant }) {
           {excepciones.length > 0 && (
             <ul className="mt-2 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
               {excepciones.map((e) => (
-                <li key={e.fecha} className="flex items-center gap-2 px-3 py-2">
+                <li key={e.id} className="flex items-center gap-2 px-3 py-2">
                   <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
-                    {fmtFechaCorta(e.fecha)}
+                    {fmtRango(e.desde, e.hasta)}
                     {e.motivo ? ` · ${e.motivo}` : ''}
                   </span>
                   <button
                     type="button"
-                    onClick={() => removeExcepcion(e.fecha)}
+                    onClick={() => removeExcepcion(e.id)}
                     className="shrink-0 text-slate-400 transition hover:text-red-500"
-                    aria-label={`Quitar cierre del ${fmtFechaCorta(e.fecha)}`}
+                    aria-label={`Quitar cierre del ${fmtRango(e.desde, e.hasta)}`}
                     title="Quitar"
                   >
                     <Trash2 className="h-4 w-4" />
