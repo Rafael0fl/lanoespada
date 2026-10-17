@@ -722,7 +722,6 @@ function ConfigSection({ value, onChange, tenant }) {
   const config = value ?? {}
   const boxes = config.boxes ?? []
   const serviciosDisponibles = tenant?.config?.servicio?.list ?? []
-  const step = config.slot_step_minutes ?? 15
 
   const [editIndex, setEditIndex] = useState(null)
   const [draft, setDraft] = useState(null)
@@ -839,26 +838,6 @@ function ConfigSection({ value, onChange, tenant }) {
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
           <Settings className="h-4 w-4 text-brand-600" />
           General de la agenda
-        </div>
-
-        <div className="mt-3">
-          <label className="mb-1 block text-xs font-medium text-slate-500">
-            Paso de la grilla (minutos)
-          </label>
-          <input
-            type="number"
-            min="5"
-            max="120"
-            value={step}
-            onChange={(e) => {
-              const v = Math.min(120, Math.max(5, Number(e.target.value) || 15))
-              update({ ...config, slot_step_minutes: v })
-            }}
-            className={`${inputClass} max-w-32`}
-          />
-          <p className="mt-1 text-[11px] text-slate-400">
-            Los inicios posibles de turnos caen cada {step} minutos.
-          </p>
         </div>
 
         <div className="mt-4">
