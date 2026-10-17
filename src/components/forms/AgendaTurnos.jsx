@@ -863,35 +863,48 @@ function ConfigSection({ value, onChange, tenant }) {
 
         <div className="mt-4">
           <p className="text-xs font-medium text-slate-500">Días cerrados (feriados, vacaciones)</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <label className="text-xs font-medium text-slate-500 shrink-0">Desde</label>
-            <input
-              type="date"
-              value={excDesde}
-              onChange={(e) => setExcDesde(e.target.value)}
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 max-w-[150px] shrink-0"
-              aria-label="Fecha desde"
-            />
-            <label className="text-xs font-medium text-slate-500 shrink-0">Hasta</label>
-            <input
-              type="date"
-              value={excHasta}
-              onChange={(e) => setExcHasta(e.target.value)}
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 max-w-[150px] shrink-0"
-              aria-label="Fecha hasta"
-            />
-            <input
-              type="text"
-              value={excMotivo}
-              onChange={(e) => setExcMotivo(e.target.value)}
-              placeholder="Motivo (ej: Feriado)"
-              className="flex-1 rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 min-w-[140px]"
-            />
+          <div className="mt-2 flex flex-wrap items-center gap-4">
+            <div className="flex flex-col items-center gap-1">
+              <label className="text-[10px] font-medium text-slate-500 text-center">
+                Desde
+              </label>
+              <input
+                type="date"
+                value={excDesde}
+                onChange={(e) => setExcDesde(e.target.value)}
+                className="w-[150px] rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                aria-label="Fecha desde"
+              />
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <label className="text-[10px] font-medium text-slate-500 text-center">
+                Hasta
+              </label>
+              <input
+                type="date"
+                value={excHasta}
+                onChange={(e) => setExcHasta(e.target.value)}
+                className="w-[150px] rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                aria-label="Fecha hasta"
+              />
+            </div>
+            <div className="flex flex-col items-center gap-1 min-w-[140px]">
+              <label className="text-[10px] font-medium text-slate-500 text-center">
+                Motivo
+              </label>
+              <input
+                type="text"
+                value={excMotivo}
+                onChange={(e) => setExcMotivo(e.target.value)}
+                placeholder="Motivo (ej: Feriado)"
+                className="w-[180px] rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
             <button
               type="button"
               onClick={addExcepcion}
               disabled={!excDesde || !excHasta}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
             >
               <Plus className="h-4 w-4" />
               Añadir
