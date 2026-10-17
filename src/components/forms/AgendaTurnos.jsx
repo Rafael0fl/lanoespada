@@ -6,8 +6,10 @@
  *   - "Ver": por ahora mensaje "pendiente en terminarse"
  *   - "Configuración": Boxes (con layout horizontal de cards)
  * -------------------------------------------------------------------------- */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Boxes, CalendarCheck, CalendarX, Clock, Plus, Eye, Settings, Trash2, Wrench } from 'lucide-react'
+
+import { cancelAppointment, createAppointment, fetchAppointments } from '../../services/api'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
@@ -275,8 +277,9 @@ function ReservaForm({ franja, servicios, tenant, existentes, fechaISO, hoyISO, 
  * Cuando exista la tabla appointments, los bloques se reemplazan por el
  * resultado de getSlots(box, fecha) sin tocar esta vista.
  * ------------------------------------------------------------------------ */
-function VerSection({ value, onChange, tenant }) {
+function VerSection({ value, tenant }) {
   const boxes = value?.boxes ?? []
+  const tenantId = tenant?.id ?? ''
   const hoy = new Date()
   const hoyISO = toISO(hoy)
   const ahoraHHMM = `${String(hoy.getHours()).padStart(2, '0')}:${String(hoy.getMinutes()).padStart(2, '0')}`
@@ -285,6 +288,26 @@ function VerSection({ value, onChange, tenant }) {
   const [weekOffset, setWeekOffset] = useState(0)
   const [fechaISO, setFechaISO] = useState(hoyISO)
   const [reservaEn, setReservaEn] = useState(null) // indice de franja con form abierto
+  const [appointments, setAppointments] = useState([])
+
+  const boxRealIdx = Math.min(boxIdx, boxes.length - 1)
+  const box = boxes[boxRealIdx] ?? {}
+
+  // Cargar turnos del backend (o mock) cuando cambia el día o el box.
+  useEffect(() => {
+    if (!tenantId || !box?.nombre) return
+    let alive = true
+    fetchAppointments(tenantId, fechaISO, box.nombre)
+      .then((res) => {
+        if (!alive) return
+        setAppointments(res.data || [])
+      })
+      .catch(() => {
+        if (!alive) return
+        setAppointments([])
+      })
+    return () => { alive = false }
+  }, [tenantId, fechaISO, box?.nombre])
 
   if (!boxes || boxes.length === 0) {
     return (
@@ -298,8 +321,6 @@ function VerSection({ value, onChange, tenant }) {
     )
   }
 
-  const boxRealIdx = Math.min(boxIdx, boxes.length - 1)
-  const box = boxes[boxRealIdx] ?? {}
   const enRango = (iso, desde, hasta) => iso >= desde && iso <= hasta
   const excepcionDelDia = (box.excepciones ?? []).find((e) => enRango(fechaISO, e.desde, e.hasta))
   const esPasado = fechaISO < hoyISO
@@ -319,20 +340,38 @@ function VerSection({ value, onChange, tenant }) {
           month: 'numeric',
         })
 
-  const patchBox = (idx, patch) => {
-    const next = boxes.map((b, i) => (i === idx ? { ...b, ...patch } : b))
-    onChange({ ...(value ?? {}), boxes: next })
+  const refetchAppointments = () => {
+    if (!tenantId || !box?.nombre) return
+    fetchAppointments(tenantId, fechaISO, box.nombre)
+      .then((res) => setAppointments(res.data || []))
+      .catch(() => {})
   }
 
-  const agregarReserva = (reserva) => {
-    const box = boxes[boxRealIdx] ?? {}
-    patchBox(boxRealIdx, { reservas: [...(box.reservas ?? []), { ...reserva, fecha: fechaISO }] })
-    setReservaEn(null)
+  const agregarReserva = async (reserva) => {
+    try {
+      await createAppointment(tenantId, {
+        box: box.nombre,
+        servicio: reserva.servicio || '',
+        cliente: reserva.cliente,
+        fecha: fechaISO,
+        hora: reserva.hora,
+        duracionMin: reserva.duracion_min || 30,
+        origen: 'manual',
+      })
+      refetchAppointments()
+      setReservaEn(null)
+    } catch (err) {
+      console.error('[AgendaTurnos] Error al crear turno:', err?.message || err)
+    }
   }
 
-  const eliminarReserva = (id) => {
-    const box = boxes[boxRealIdx] ?? {}
-    patchBox(boxRealIdx, { reservas: (box.reservas ?? []).filter((r) => r.id !== id) })
+  const eliminarReserva = async (id) => {
+    try {
+      await cancelAppointment(tenantId, id)
+      refetchAppointments()
+    } catch (err) {
+      console.error('[AgendaTurnos] Error al cancelar turno:', err?.message || err)
+    }
   }
 
   // Servicios ofrecibles en este box: los asignados, o todos si no asigno ninguno.
@@ -485,12 +524,12 @@ function VerSection({ value, onChange, tenant }) {
         ) : (
           <ul className="mt-3 space-y-2">
             {franjasDelDia.map((f, i) => {
-              const reservas = (box.reservas ?? [])
+              const reservas = (appointments ?? [])
                 .filter(
                   (r) =>
-                    r.fecha === fechaISO &&
+                    r.box === box.nombre &&
                     r.hora >= f.start &&
-                    sumarMinutos(r.hora, Number(r.duracion_min) || 30) <= f.end,
+                    (r.hora_fin || sumarMinutos(r.hora, Number(r.duracion_min) || 30)) <= f.end,
                 )
                 .sort((a, b) => (a.hora < b.hora ? -1 : 1))
               return (
@@ -556,7 +595,7 @@ function VerSection({ value, onChange, tenant }) {
                       franja={f}
                       servicios={serviciosElegibles}
                       tenant={tenant}
-                      existentes={(box.reservas ?? []).filter((r) => r.fecha === fechaISO)}
+                      existentes={(appointments ?? []).filter((r) => r.box === box.nombre && r.fecha === fechaISO)}
                       fechaISO={fechaISO}
                       hoyISO={hoyISO}
                       ahoraHHMM={ahoraHHMM}
@@ -1005,7 +1044,7 @@ export default function AgendaTurnos({ value, onChange, tenant }) {
         </div>
       </div>
 
-      {tab === 'ver' && <VerSection value={value} onChange={onChange} tenant={tenant} />}
+      {tab === 'ver' && <VerSection value={value} tenant={tenant} />}
       {tab === 'config' && <ConfigSection value={value} onChange={onChange} tenant={tenant} />}
     </div>
   )
