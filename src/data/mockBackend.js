@@ -298,8 +298,14 @@ export function parseLegacyDuration(text) {
 // (ej: `duracion` texto -> `duracion_min` minutos). Lo ya guardado bien no
 // se toca; lo ilegible se conserva con su key legacy para no perder datos.
 export function migrarContenidoLegacy(featureKey, content) {
+  if (!content || typeof content !== 'object') return content
+  // Limpieza de formato viejo de agenda_turnos (tenia key 'config' vacio).
+  if (featureKey === 'agenda_turnos' && content.config === '') {
+    const { config: _config, ...rest } = content  // eslint-disable-line no-unused-vars
+    content = rest
+  }
   const schema = FEATURE_CONTENT_SCHEMA[featureKey]
-  if (!schema || !content || typeof content !== 'object') return content
+  if (!schema) return content
   const next = { ...content }
   for (const field of schema.fields) {
     if (field.type !== 'objectList' || !Array.isArray(next[field.key])) continue
