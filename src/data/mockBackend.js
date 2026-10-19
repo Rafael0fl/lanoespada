@@ -59,6 +59,7 @@ export const FEATURES = [
   { key: 'profesionales', label: 'Profesionales', icon: '👨‍⚕️', description: 'Profesionales que atienden en el negocio' },
   { key: 'agenda_turnos', label: 'Agenda de turnos', icon: '📅', description: 'Gestión de turnos con boxes, servicios y profesionales' },
   { key: 'promocion_evento', label: 'Promoción / Evento', icon: '🎉', description: 'Promos y eventos vigentes' },
+  { key: 'pagos_mp', label: 'Pagos (Mercado Pago)', icon: '💳', description: 'Cobros a través de Mercado Pago: señas de turnos y pagos automáticos' },
 ]
 
 export const FEATURE_BY_KEY = Object.fromEntries(FEATURES.map((f) => [f.key, f]))
@@ -241,6 +242,16 @@ export const FEATURE_CONTENT_SCHEMA = {
         type: 'promoEventList',
         addLabel: 'Nueva promoción o evento',
         listLabel: 'Promociones y eventos',
+      },
+    ],
+  },
+  pagos_mp: {
+    description: 'Cobros a través de Mercado Pago.',
+    fields: [
+      {
+        key: 'config',
+        type: 'custom',
+        component: 'PaymentMP',
       },
     ],
   },
