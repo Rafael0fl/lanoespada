@@ -6,7 +6,7 @@
  * para confirmar turnos.
  * ========================================================================== */
 import { useState } from 'react'
-import { CreditCard, Key, DollarSign, Info } from 'lucide-react'
+import { CreditCard, Key, Info } from 'lucide-react'
 import { updateTenant } from '../../services/api'
 
 const inputClass =
@@ -33,8 +33,6 @@ export default function PaymentMP({ value, onChange, tenant }) {
   const config = value ?? {}
   const [token, setToken] = useState(config.access_token || '')
   const [cobraSeña, setCobraSeña] = useState(config.cobra_seña ?? false)
-  const [montoSeña, setMontoSeña] = useState(config.monto_seña || '')
-  const [descripcionSeña, setDescripcionSeña] = useState(config.descripcion_seña || 'Seña para confirmar turno')
   const [guardado, setGuardado] = useState(false)
 
   const handleGuardar = async () => {
@@ -42,8 +40,6 @@ export default function PaymentMP({ value, onChange, tenant }) {
       ...config,
       access_token: token.trim(),
       cobra_seña: cobraSeña,
-      monto_seña: montoSeña ? Number(montoSeña) : null,
-      descripcion_seña: descripcionSeña.trim(),
     }
     onChange(nextConfig)
     if (tenant?.id) {
@@ -90,43 +86,18 @@ export default function PaymentMP({ value, onChange, tenant }) {
         </div>
         <p className="mt-1 text-sm text-slate-500">
           Si está activado, cuando un cliente agende un turno se le pedirá una seña para confirmarlo.
-          La IA generará un link de pago automáticamente.
+          La IA calcula el monto según tus <strong>políticas</strong> y el <strong>precio del servicio</strong>,
+          genera el link de pago automáticamente y solo confirma el turno cuando el pago se acredita.
         </p>
 
         <div className="mt-4 space-y-3">
           <Toggle
             checked={cobraSeña}
             onChange={setCobraSeña}
-            label="Cobrar seña"
-            description="Los clientes deben pagar una seña para confirmar su turno"
+            label="Cobrar seña para confirmar turnos"
+            description="Los turnos quedan pendientes de pago hasta que el cliente abone la seña"
           />
         </div>
-
-        {cobraSeña && (
-          <div className="mt-4 space-y-3 rounded-xl bg-brand-50/50 p-4">
-            <label className="block text-xs font-medium text-slate-500">
-              <DollarSign className="mr-1 inline h-3.5 w-3.5" />
-              Monto de seña ($)
-              <input
-                type="number"
-                value={montoSeña}
-                onChange={(e) => setMontoSeña(e.target.value)}
-                placeholder="Ej: 500"
-                className={`${inputClass} mt-1`}
-              />
-            </label>
-            <label className="block text-xs font-medium text-slate-500">
-              Descripción del cobro
-              <input
-                type="text"
-                value={descripcionSeña}
-                onChange={(e) => setDescripcionSeña(e.target.value)}
-                placeholder="Seña para confirmar turno"
-                className={`${inputClass} mt-1`}
-              />
-            </label>
-          </div>
-        )}
       </section>
 
       {/* Info */}
