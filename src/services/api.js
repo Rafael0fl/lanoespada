@@ -19,7 +19,7 @@
 
 import * as mock from '../data/mockBackend'
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? '/v1').replace(/\/+$/, '')
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '')
 
 // Timeout corto: si el backend no responde rapido, fallamos al modo demo.
 const TIMEOUT_MS = 1800
