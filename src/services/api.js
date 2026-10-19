@@ -299,3 +299,23 @@ export function fetchTenantMetrics(tenantId, range = 'hoy') {
     () => mock.getTenantMetrics(tenantId, range),
   )
 }
+
+/* --------------------------- MERCADO PAGO (OAuth) ------------------------- */
+// Nota: estos endpoints NO usan withFallback (no hay modo demo para OAuth).
+// Devuelven la cruda respuesta del backend.
+
+// Estado de la cuenta MP conectada del negocio.
+export async function fetchMPAccount(tenantId) {
+  return request(`/tenants/${encodeURIComponent(tenantId)}/mp/account`)
+}
+
+// Obtiene la URL de autorización de MP para conectar la cuenta del negocio.
+// El backend devuelve { url, tenant_id }; el frontend navega a `url`.
+export async function getMPConnectUrl(tenantId) {
+  return request(`/tenants/${encodeURIComponent(tenantId)}/mp/connect`)
+}
+
+// Desconecta la cuenta MP del negocio.
+export async function disconnectMPAccount(tenantId) {
+  return request(`/tenants/${encodeURIComponent(tenantId)}/mp/account`, { method: 'DELETE' })
+}
