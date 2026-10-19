@@ -3,7 +3,7 @@
  * --------------------------------------------------------------------------
  * Configuración de la Agenda de Turnos. Especificación pedida:
  *   - Dos botones: "Ver" y "Configuración"
- *   - "Ver": por ahora mensaje "pendiente en terminarse"
+ *   - "Ver": agenda del dia con reservas manuales y turnos de la IA
  *   - "Configuración": Boxes (con layout horizontal de cards)
  * -------------------------------------------------------------------------- */
 import { useEffect, useState } from 'react'
@@ -275,10 +275,9 @@ function ReservaForm({ franja, servicios, tenant, existentes, fechaISO, hoyISO, 
 }
 
 /* --------------------------------------------------------------------------
- * VerSection: vista de agenda (solo lectura por ahora).
+ * VerSection: vista de agenda del dia.
  * Pildoras de box + tira semanal desde hoy + franjas del dia elegido.
- * Cuando exista la tabla appointments, los bloques se reemplazan por el
- * resultado de getSlots(box, fecha) sin tocar esta vista.
+ * Muestra reservas manuales y turnos agendados por la IA.
  * ------------------------------------------------------------------------ */
 function VerSection({ value, tenant }) {
   const boxes = value?.boxes ?? []
@@ -619,7 +618,6 @@ function VerSection({ value, tenant }) {
           </ul>
         )}
         <p className="mt-3 text-[11px] text-slate-400">
-          Acordate de guardar la feature para que las reservas queden registradas.
           Los turnos agendados por la IA aparecerán acá.
         </p>
       </div>
@@ -1068,7 +1066,7 @@ export default function AgendaTurnos({ value, onChange, tenant }) {
         </button>
         <div className="ml-auto flex items-center gap-1 text-xs text-slate-400">
           <Wrench className="h-3.5 w-3.5" />
-          Vista previa del frontend
+          Agenda de turnos
         </div>
       </div>
 
