@@ -311,8 +311,12 @@ export async function fetchMPAccount(tenantId) {
 
 // Obtiene la URL de autorización de MP para conectar la cuenta del negocio.
 // El backend devuelve { url, tenant_id }; el frontend navega a `url`.
+// Le pasamos nuestro origen + base para que, tras autorizar, MP nos devuelva
+// a ESTA misma app (ngrok en desarrollo, GitHub Pages para los socios).
 export async function getMPConnectUrl(tenantId) {
-  return request(`/tenants/${encodeURIComponent(tenantId)}/mp/connect`)
+  const base = new URL(import.meta.env.BASE_URL, window.location.origin).href.replace(/\/$/, '')
+  const params = new URLSearchParams({ frontend_origin: base })
+  return request(`/tenants/${encodeURIComponent(tenantId)}/mp/connect?${params.toString()}`)
 }
 
 // Desconecta la cuenta MP del negocio.
