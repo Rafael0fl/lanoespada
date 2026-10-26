@@ -60,6 +60,7 @@ export const FEATURES = [
   { key: 'agenda_turnos', label: 'Agenda de turnos', icon: '📅', description: 'Gestión de turnos con boxes, servicios y profesionales' },
   { key: 'promocion_evento', label: 'Promoción / Evento', icon: '🎉', description: 'Promos y eventos vigentes' },
   { key: 'pagos_mp', label: 'Pagos (Mercado Pago)', icon: '💳', description: 'Cobros a través de Mercado Pago: señas de turnos y pagos automáticos' },
+  { key: 'inventario', label: 'Inventario', icon: '📦', description: 'Gestión de stock de productos: carga, consulta y venta automática por WhatsApp' },
 ]
 
 export const FEATURE_BY_KEY = Object.fromEntries(FEATURES.map((f) => [f.key, f]))
@@ -252,6 +253,16 @@ export const FEATURE_CONTENT_SCHEMA = {
         key: 'config',
         type: 'custom',
         component: 'PaymentMP',
+      },
+    ],
+  },
+  inventario: {
+    description: 'Gestión de inventario de productos y stock.',
+    fields: [
+      {
+        key: 'config',
+        type: 'custom',
+        component: 'InventarioProductos',
       },
     ],
   },

@@ -14,6 +14,7 @@ import { ArrowLeft, Save, AlertTriangle, Wrench } from 'lucide-react'
 
 import AgendaTurnos from '../../components/forms/AgendaTurnos'
 import FeatureField from '../../components/forms/FeatureField'
+import InventarioProductos from '../../components/forms/InventarioProductos'
 import PaymentMP from '../../components/forms/PaymentMP'
 import ScheduleForm from '../../components/forms/ScheduleForm'
 import DemoBanner from '../../components/ui/DemoBanner'
@@ -199,6 +200,12 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
                 />
               ) : field.type === 'custom' && field.component === 'PaymentMP' ? (
                 <PaymentMP
+                  value={form}
+                  onChange={setForm}
+                  tenant={tenant}
+                />
+              ) : field.type === 'custom' && field.component === 'InventarioProductos' ? (
+                <InventarioProductos
                   value={form}
                   onChange={setForm}
                   tenant={tenant}
