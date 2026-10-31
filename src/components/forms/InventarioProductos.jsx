@@ -225,11 +225,11 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="text-xs font-medium text-slate-500">
           Nombre *
-          <input type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Remera básica" className={`${inputClass} mt-1`} />
+          <input type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Remera básica" className={`${inputClass} mt-1`} onBlur={guardar} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           SKU (código único)
-          <input type="text" value={form.sku} onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))} placeholder="Ej: REM-BAS-M-AZ" className={`${inputClass} mt-1`} />
+          <input type="text" value={form.sku} onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))} placeholder="Ej: REM-BAS-M-AZ" className={`${inputClass} mt-1`} onBlur={guardar} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           Categoría
@@ -237,6 +237,7 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
             <select
               value={form.category && categorias.includes(form.category) ? form.category : ''}
               onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+              onBlur={guardar}
               className={`${inputClass} flex-1`}
             >
               <option value="">Sin categoría</option>
@@ -248,19 +249,19 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
         </label>
         <label className="text-xs font-medium text-slate-500">
           Precio ($) *
-          <input type="number" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} placeholder="8500" className={`${inputClass} mt-1`} />
+          <input type="number" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} placeholder="8500" className={`${inputClass} mt-1`} onBlur={guardar} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           Stock actual
-          <input type="number" value={form.stock} onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))} placeholder="0" className={`${inputClass} mt-1`} />
+          <input type="number" value={form.stock} onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))} placeholder="0" className={`${inputClass} mt-1`} onBlur={guardar} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           Stock mínimo (alerta)
-          <input type="number" value={form.min_stock} onChange={(e) => setForm((p) => ({ ...p, min_stock: e.target.value }))} placeholder="5" className={`${inputClass} mt-1`} />
+          <input type="number" value={form.min_stock} onChange={(e) => setForm((p) => ({ ...p, min_stock: e.target.value }))} placeholder="5" className={`${inputClass} mt-1`} onBlur={guardar} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           URL de imagen
-          <input type="text" value={form.image_url} onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))} placeholder="https://..." className={`${inputClass} mt-1`} />
+          <input type="text" value={form.image_url} onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))} placeholder="https://..." className={`${inputClass} mt-1`} onBlur={guardar} />
         </label>
       </div>
 
@@ -318,19 +319,10 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
           )}
         </div>
       </div>
-
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">
-          Cancelar
-        </button>
-        <button type="button" onClick={guardar} disabled={!form.name.trim() || !form.price || Number(form.price) <= 0} className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
-          <Plus className="h-4 w-4" />
-          {producto ? 'Guardar cambios' : 'Agregar producto'}
-        </button>
-      </div>
     </div>
   )
 }
+
 function ConfigSection({ productos, setProductos, columnas, setColumnas, categorias, setCategorias, onEliminarCategoria }) {
   const [editando, setEditando] = useState(null)
   const [busqueda, setBusqueda] = useState("")
