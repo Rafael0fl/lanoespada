@@ -846,11 +846,18 @@ function buildDatabase() {
     if (!feats.horarios_atencion && rnd() > 0.2) {
       feats.horarios_atencion = true
     }
-    // Spa Eros (t-003): todas habilitadas menos obras_sociales. No consume
-    // azar para no alterar al resto de tenants del seed.
+    // Spa Eros (t-003): todas habilitadas menos obras_sociales e inventario.
+    // No consume azar para no alterar al resto de tenants del seed.
     if (i === 2) {
       FEATURES.forEach((f) => {
-        feats[f.key] = f.key !== 'obras_sociales'
+        feats[f.key] = f.key !== 'obras_sociales' && f.key !== 'inventario'
+      })
+    }
+    // Tienda Hermes (t-007): todas habilitadas menos obras_sociales y agenda_turnos.
+    // No consume azar para no alterar al resto de tenants del seed.
+    if (i === 6) {
+      FEATURES.forEach((f) => {
+        feats[f.key] = f.key !== 'obras_sociales' && f.key !== 'agenda_turnos'
       })
     }
 
