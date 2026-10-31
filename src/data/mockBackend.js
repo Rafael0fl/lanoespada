@@ -867,7 +867,6 @@ function buildDatabase() {
       features: feats,
       is_active: i % 5 !== 4,          // algunos inactivos
       is_hidden: i % 7 === 0,          // algunos ocultos (solo admin)
-      store: false,
       socio,
       response_schedule: i % 5 === 4 ? { start: '07:00', end: '17:00' } : 'fulltime',
       response_time: i % 5 === 4 ? 'schedule' : 'fulltime',
@@ -1014,7 +1013,6 @@ export function createTenant(data) {
     features: normalizeFeatures(data.features),
     is_active: data.is_active ?? true,
     is_hidden: data.is_hidden ?? false,
-    store: data.store ?? false,
     socio: data.socio ?? '',
     response_schedule:
       data.response_schedule ??

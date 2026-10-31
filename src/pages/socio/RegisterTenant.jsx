@@ -90,7 +90,6 @@ export default function RegisterTenant() {
       features,
       is_active: true,
       is_hidden: false,
-      store: false,
       socio: user?.username ?? '',
       response_time: 'fulltime',
     }

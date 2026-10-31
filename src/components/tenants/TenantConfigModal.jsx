@@ -4,7 +4,7 @@
  * Modal de configuracion de un tenant (boton de ajustes en "Ver Tenants").
  *
  * Permite modificar:
- *   - Estados: is_active, is_hidden, store (toogles).
+ *   - Estados: is_active, is_hidden (toogles).
  *   - Informacion basica: nombre, telefono, industria y prompt.
  *   - Horario de respuesta de la IA: card con 3 modos (24 hs / mismo horario /
  *     por día). Se guarda en response_schedule ('fulltime' | { start, end } |
@@ -42,7 +42,6 @@ export default function TenantConfigModal({ tenant, onClose, onSaved }) {
     industry: tenant.industry ?? '',
     system_prompt: tenant.system_prompt ?? '',
     is_active: tenant.is_active ?? true,
-    store: tenant.store ?? false,
     response_schedule:
       tenant.response_schedule ??
       (tenant.response_time === 'schedule'
@@ -78,7 +77,6 @@ export default function TenantConfigModal({ tenant, onClose, onSaved }) {
         industry: form.industry,
         system_prompt: form.system_prompt,
         is_active: form.is_active,
-        store: form.store,
         response_schedule: form.response_schedule,
         features: form.features,
       })
@@ -134,12 +132,6 @@ export default function TenantConfigModal({ tenant, onClose, onSaved }) {
               onChange={set('is_active')}
               label="Activo"
               description="Si está desactivado, la IA deja de responder a este negocio."
-            />
-            <Toggle
-              checked={form.store}
-              onChange={set('store')}
-              label="Tienda / stock"
-              description="Preparado para la futura feature de productos y stock."
             />
           </div>
 
