@@ -4,18 +4,18 @@
  * Configuración y gestión del inventario de productos.
  * ========================================================================== */
 import { useEffect, useState } from 'react'
-import { Package, Plus, Trash2, Eye, Settings, Search, Upload, FileText, Pencil } from 'lucide-react'
+import { Package, Plus, Trash2, Eye, Settings, Search, Upload, FileText, Pencil, AlertTriangle } from 'lucide-react'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
 
 const MOCK_PRODUCTOS = [
-  { id: 'p1', name: 'Remera básica', price: 8500, stock: 12, min_stock: 5, category: 'Remeras', image_url: null, attributes: { talle: 'M', color: 'Azul', marca: 'Nike' } },
-  { id: 'p2', name: 'Remera básica', price: 8500, stock: 3, min_stock: 5, category: 'Remeras', image_url: null, attributes: { talle: 'S', color: 'Rojo', marca: 'Nike' } },
-  { id: 'p3', name: 'Jean clásico', price: 25000, stock: 8, min_stock: 3, category: 'Pantalones', image_url: null, attributes: { talle: '42', color: 'Azul', marca: 'Levi\'s' } },
-  { id: 'p4', name: 'Zapatillas urbanas', price: 45000, stock: 0, min_stock: 2, category: 'Calzado', image_url: null, attributes: { talle: '40', color: 'Blanco', marca: 'Adidas' } },
-  { id: 'p5', name: 'Gorra snapback', price: 6000, stock: 15, min_stock: 5, category: 'Accesorios', image_url: null, attributes: { color: 'Negro', marca: 'New Era' } },
-  { id: 'p6', name: 'Buzo hoodie', price: 18000, stock: 2, min_stock: 4, category: 'Buzos', image_url: null, attributes: { talle: 'L', color: 'Gris', marca: 'Puma' } },
+  { id: 'p1', name: 'Remera básica', sku: 'REM-BAS-M-AZ', price: 8500, stock: 12, min_stock: 5, category: 'Remeras', image_url: null, attributes: { talle: 'M', color: 'Azul', marca: 'Nike' } },
+  { id: 'p2', name: 'Remera básica', sku: 'REM-BAS-S-RO', price: 8500, stock: 3, min_stock: 5, category: 'Remeras', image_url: null, attributes: { talle: 'S', color: 'Rojo', marca: 'Nike' } },
+  { id: 'p3', name: 'Jean clásico', sku: 'JEA-CLA-42-AZ', price: 25000, stock: 8, min_stock: 3, category: 'Pantalones', image_url: null, attributes: { talle: '42', color: 'Azul', marca: 'Levi\'s' } },
+  { id: 'p4', name: 'Zapatillas urbanas', sku: 'ZAP-URB-40-BL', price: 45000, stock: 0, min_stock: 2, category: 'Calzado', image_url: null, attributes: { talle: '40', color: 'Blanco', marca: 'Adidas' } },
+  { id: 'p5', name: 'Gorra snapback', sku: 'GOR-SNA-UN-NE', price: 6000, stock: 15, min_stock: 5, category: 'Accesorios', image_url: null, attributes: { color: 'Negro', marca: 'New Era' } },
+  { id: 'p6', name: 'Buzo hoodie', sku: 'BUZ-HOO-L-GR', price: 18000, stock: 2, min_stock: 4, category: 'Buzos', image_url: null, attributes: { talle: 'L', color: 'Gris', marca: 'Puma' } },
 ]
 
 const MOCK_COLUMNAS = ['talle', 'color', 'marca']
@@ -153,6 +153,7 @@ function VistaCatalogo({ productos, onStockChange }) {
 function ProductoForm({ producto, onSave, onCancel }) {
   const [form, setForm] = useState(() => ({
     name: producto?.name ?? '',
+    sku: producto?.sku ?? '',
     price: producto?.price ?? '',
     stock: producto?.stock ?? 0,
     min_stock: producto?.min_stock ?? 0,
@@ -210,6 +211,10 @@ function ProductoForm({ producto, onSave, onCancel }) {
         <label className="text-xs font-medium text-slate-500">
           Nombre *
           <input type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Remera básica" className={`${inputClass} mt-1`} />
+        </label>
+        <label className="text-xs font-medium text-slate-500">
+          SKU (código único)
+          <input type="text" value={form.sku} onChange={(e) => setForm((p) => ({ ...p, sku: e.target.value }))} placeholder="Ej: REM-BAS-M-AZ" className={`${inputClass} mt-1`} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           Categoría
@@ -282,22 +287,70 @@ function ProductoForm({ producto, onSave, onCancel }) {
 function ConfigSection({ productos, setProductos }) {
   const [editando, setEditando] = useState(null)
   const [busqueda, setBusqueda] = useState('')
+  const [duplicado, setDuplicado] = useState(null) // producto duplicado encontrado
+  const [pendiente, setPendiente] = useState(null) // producto pendiente de guardar
 
-  const filtrados = productos.filter((p) =>
-    p.name.toLowerCase().includes(busqueda.toLowerCase()) ||
-    (p.category || '').toLowerCase().includes(busqueda.toLowerCase())
-  )
+  // Buscar si ya existe un producto con el mismo nombre + mismos atributos
+  const buscarDuplicado = (prod) => {
+    return productos.find((p) =>
+      p.id !== prod.id &&
+      p.name.toLowerCase() === prod.name.toLowerCase() &&
+      JSON.stringify(p.attributes || {}) === JSON.stringify(prod.attributes || {})
+    )
+  }
 
   const guardarProducto = (prod) => {
-    setProductos((prev) => {
-      const idx = prev.findIndex((p) => p.id === prod.id)
-      if (idx >= 0) {
-        const next = [...prev]
-        next[idx] = prod
-        return next
-      }
-      return [...prev, prod]
-    })
+    const existe = productos.some((p) => p.id === prod.id)
+    if (existe) {
+      // Edición de producto existente
+      setProductos((prev) => {
+        const idx = prev.findIndex((p) => p.id === prod.id)
+        if (idx >= 0) {
+          const next = [...prev]
+          next[idx] = prod
+          return next
+        }
+        return [...prev, prod]
+      })
+      setEditando(null)
+      return
+    }
+
+    // Producto nuevo: verificar duplicados
+    const dup = buscarDuplicado(prod)
+    if (dup) {
+      setDuplicado(dup)
+      setPendiente(prod)
+      return
+    }
+
+    // Sin duplicado, guardar normal
+    setProductos((prev) => [...prev, prod])
+    setEditando(null)
+  }
+
+  const confirmarDuplicado = () => {
+    if (!duplicado || !pendiente) return
+    // Sumar stock al existente
+    setProductos((prev) =>
+      prev.map((p) =>
+        p.id === duplicado.id
+          ? { ...p, stock: p.stock + pendiente.stock, price: pendiente.price || p.price }
+          : p
+      )
+    )
+    setDuplicado(null)
+    setPendiente(null)
+    setEditando(null)
+  }
+
+  const cancelarDuplicado = () => {
+    // Crear el producto igual (forzar)
+    if (pendiente) {
+      setProductos((prev) => [...prev, pendiente])
+    }
+    setDuplicado(null)
+    setPendiente(null)
     setEditando(null)
   }
 
@@ -324,7 +377,39 @@ function ConfigSection({ productos, setProductos }) {
         </button>
       </div>
 
-      {editando && (
+      {/* Diálogo de duplicado */}
+      {duplicado && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 space-y-3">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">
+                Ya existe un producto con estos datos
+              </p>
+              <p className="mt-1 text-sm text-amber-700">
+                <strong>{duplicado.name}</strong>
+                {duplicado.attributes && Object.keys(duplicado.attributes).length > 0 && (
+                  <> ({Object.entries(duplicado.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')})</>
+                )}
+                — Stock actual: {duplicado.stock} unidades.
+              </p>
+              <p className="mt-1 text-sm text-amber-700">
+                El nuevo producto tiene {pendiente?.stock ?? 0} unidades. ¿Querés sumar el stock al producto existente?
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3">
+            <button type="button" onClick={cancelarDuplicado} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">
+              No, crear igual
+            </button>
+            <button type="button" onClick={confirmarDuplicado} className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700">
+              Sí, sumar stock
+            </button>
+          </div>
+        </div>
+      )}
+
+      {editando && !duplicado && (
         <ProductoForm
           producto={editando === 'new' ? null : editando}
           onSave={guardarProducto}
@@ -337,6 +422,7 @@ function ConfigSection({ productos, setProductos }) {
           <thead className="bg-slate-50">
             <tr>
               <th className="px-4 py-3 text-left font-semibold text-slate-600">Producto</th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-600">SKU</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-600">Categoría</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-600">Atributos</th>
               <th className="px-4 py-3 text-right font-semibold text-slate-600">Precio</th>
@@ -350,6 +436,7 @@ function ConfigSection({ productos, setProductos }) {
               return (
                 <tr key={p.id} className={bajoStock ? 'bg-rose-50/40' : ''}>
                   <td className="px-4 py-3 font-medium text-slate-800">{p.name}</td>
+                  <td className="px-4 py-3 text-slate-400 text-xs font-mono">{p.sku || '—'}</td>
                   <td className="px-4 py-3 text-slate-500">{p.category || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
@@ -385,7 +472,7 @@ function ConfigSection({ productos, setProductos }) {
             })}
             {filtrados.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-400">
                   {busqueda ? 'No se encontraron productos.' : 'Sin productos. Hacé clic en "Nuevo producto".'}
                 </td>
               </tr>
