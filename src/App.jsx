@@ -51,7 +51,15 @@ import TenantMetrics from './pages/tenant/TenantMetrics'
 import ToolsList from './pages/tenant/ToolsList'
 import FeatureTool from './pages/tenant/FeatureTool'
 
-/* Shell del tenant: filtra los items de navegacion segun las features habilitadas. */
+const adminNavItems = [
+  { to: '/admin', label: 'Muerte en Teherán', icon: LayoutDashboard },
+]
+
+const partnerNavItems = [
+  { to: '/socio/tenant/nuevo', label: 'Añadir Tenant', icon: Store },
+  { to: '/socio/tenants', label: 'Ver Tenants', icon: LayoutList },
+  { to: '/socio/metrics', label: 'Métricas', icon: BarChart3 },
+]
 function TenantShell() {
   const { user } = useAuth()
   const [navItems, setNavItems] = useState([
