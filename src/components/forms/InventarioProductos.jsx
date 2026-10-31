@@ -4,7 +4,7 @@
  * Configuración y gestión del inventario de productos.
  * ========================================================================== */
 import { useEffect, useState } from 'react'
-import { Package, Plus, Trash2, Eye, Settings, Search, Upload, FileText, Pencil, AlertTriangle } from 'lucide-react'
+import { Package, Plus, Trash2, Eye, Settings, Search, Upload, FileText, Pencil, AlertTriangle, X } from 'lucide-react'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
@@ -150,17 +150,27 @@ function VistaCatalogo({ productos, onStockChange }) {
   )
 }
 
-function ProductoForm({ producto, onSave, onCancel }) {
-  const [form, setForm] = useState(() => ({
-    name: producto?.name ?? '',
-    sku: producto?.sku ?? '',
-    price: producto?.price ?? '',
-    stock: producto?.stock ?? 0,
-    min_stock: producto?.min_stock ?? 0,
-    category: producto?.category ?? '',
-    image_url: producto?.image_url ?? '',
-    attributes: producto?.attributes ?? {},
-  }))
+function ProductoForm({ producto, onSave, onCancel, columnas = [] }) {
+  const [form, setForm] = useState(() => {
+    const attrs = { ...(producto?.attributes ?? {}) }
+    // Asegurar que los atributos predefinidos existan
+    columnas.forEach((col) => {
+      if (!(col in attrs)) attrs[col] = ''
+    })
+    return {
+      name: producto?.name ?? '',
+      sku: producto?.sku ?? '',
+      price: producto?.price ?? '',
+      stock: producto?.stock ?? 0,
+      min_stock: producto?.min_stock ?? 0,
+      category: producto?.category ?? '',
+      image_url: producto?.image_url ?? '',
+      attributes: attrs,
+    }
+  })
+
+  const [nuevoAttr, setNuevoAttr] = useState('')
+  const [mostrarInputAttr, setMostrarInputAttr] = useState(false)
 
   const updateAttr = (key, value) => {
     setForm((prev) => ({
@@ -178,12 +188,16 @@ function ProductoForm({ producto, onSave, onCancel }) {
   }
 
   const addAttr = () => {
-    const key = prompt('Nombre del atributo (ej: talle, color, marca):')
-    if (key && key.trim()) {
-      setForm((prev) => ({
-        ...prev,
-        attributes: { ...prev.attributes, [key.trim().toLowerCase()]: '' },
-      }))
+    if (nuevoAttr.trim()) {
+      const key = nuevoAttr.trim().toLowerCase()
+      if (!form.attributes[key]) {
+        setForm((prev) => ({
+          ...prev,
+          attributes: { ...prev.attributes, [key]: '' },
+        }))
+      }
+      setNuevoAttr('')
+      setMostrarInputAttr(false)
     }
   }
 
@@ -238,11 +252,11 @@ function ProductoForm({ producto, onSave, onCancel }) {
         </label>
       </div>
 
-      {/* Atributos dinámicos */}
+      {/* Atributos */}
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-500">Atributos (talle, color, marca, etc.)</span>
-          <button type="button" onClick={addAttr} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 transition hover:text-brand-700">
+          <span className="text-xs font-medium text-slate-500">Atributos</span>
+          <button type="button" onClick={() => setMostrarInputAttr(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 transition hover:text-brand-700">
             <Plus className="h-3.5 w-3.5" />
             Añadir atributo
           </button>
@@ -265,8 +279,30 @@ function ProductoForm({ producto, onSave, onCancel }) {
               </button>
             </div>
           ))}
-          {Object.keys(form.attributes).length === 0 && (
-            <p className="text-xs text-slate-400">Sin atributos. Hacé clic en "Añadir atributo".</p>
+          {mostrarInputAttr && (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={nuevoAttr}
+                onChange={(e) => setNuevoAttr(e.target.value)}
+                placeholder="Nombre del atributo (ej: talle, color)"
+                className={`${inputClass} flex-1`}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') addAttr()
+                  if (e.key === 'Escape') { setMostrarInputAttr(false); setNuevoAttr('') }
+                }}
+              />
+              <button type="button" onClick={addAttr} className="shrink-0 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-700">
+                Añadir
+              </button>
+              <button type="button" onClick={() => { setMostrarInputAttr(false); setNuevoAttr('') }} className="shrink-0 text-slate-400 transition hover:text-slate-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          {Object.keys(form.attributes).length === 0 && !mostrarInputAttr && (
+            <p className="text-xs text-slate-400">Sin atributos. Hacé clic en "Añadir atributo" o definí atributos predefinidos arriba.</p>
           )}
         </div>
       </div>
@@ -284,7 +320,7 @@ function ProductoForm({ producto, onSave, onCancel }) {
   )
 }
 
-function ConfigSection({ productos, setProductos }) {
+function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
   const [editando, setEditando] = useState(null)
   const [busqueda, setBusqueda] = useState('')
   const [duplicado, setDuplicado] = useState(null) // producto duplicado encontrado
@@ -364,6 +400,44 @@ function ConfigSection({ productos, setProductos }) {
 
   return (
     <div className="space-y-6">
+      {/* Gestión de atributos predefinidos */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-800">Atributos predefinidos</h3>
+          <p className="text-xs text-slate-500">Definí los atributos que aparecerán en cada producto (talle, color, marca, etc.). Se guardan para no tener que escribirlos cada vez.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {columnas.map((col) => (
+            <span key={col} className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
+              {col}
+              <button type="button" onClick={() => { const next = columnas.filter((c) => c !== col); setColumnas(next); handleColumnasChange(next) }} className="text-brand-400 transition hover:text-brand-700">×</button>
+            </span>
+          ))}
+          {columnas.length === 0 && (
+            <p className="text-xs text-slate-400">Sin atributos predefinidos. Agregá uno abajo.</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Nuevo atributo (ej: talle, color, marca, vencimiento)"
+            className={`${inputClass} flex-1`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const val = e.target.value.trim().toLowerCase()
+                if (val && !columnas.includes(val)) {
+                  const next = [...columnas, val]
+                  setColumnas(next)
+                  handleColumnasChange(next)
+                  e.target.value = ''
+                }
+              }
+            }}
+          />
+          <span className="text-[10px] text-slate-400">Enter para agregar</span>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -412,6 +486,7 @@ function ConfigSection({ productos, setProductos }) {
           producto={editando === 'new' ? null : editando}
           onSave={guardarProducto}
           onCancel={() => setEditando(null)}
+          columnas={columnas}
         />
       )}
 
@@ -577,22 +652,31 @@ function VerSection({ productos, onStockChange }) {
 export default function InventarioProductos({ value, onChange, tenant }) {
   const [tab, setTab] = useState('ver')
   const [productos, setProductos] = useState(MOCK_PRODUCTOS)
+  const [columnas, setColumnas] = useState(MOCK_COLUMNAS)
 
   useEffect(() => {
     if (Array.isArray(value?.productos)) {
       setProductos(value.productos)
     }
+    if (Array.isArray(value?.columnas)) {
+      setColumnas(value.columnas)
+    }
   }, [value])
+
+  const handleProductosChange = (next) => {
+    setProductos(next)
+    onChange({ ...(value ?? {}), productos: next, columnas })
+  }
+
+  const handleColumnasChange = (next) => {
+    setColumnas(next)
+    onChange({ ...(value ?? {}), productos, columnas: next })
+  }
 
   const handleStockChange = (id, delta) => {
     const next = productos.map((p) => (p.id === id ? { ...p, stock: Math.max(0, p.stock + delta) } : p))
     setProductos(next)
     handleProductosChange(next)
-  }
-
-  const handleProductosChange = (next) => {
-    setProductos(next)
-    onChange({ ...(value ?? {}), productos: next })
   }
 
   return (
@@ -619,6 +703,8 @@ export default function InventarioProductos({ value, onChange, tenant }) {
         <ConfigSection
           productos={productos}
           setProductos={handleProductosChange}
+          columnas={columnas}
+          setColumnas={handleColumnasChange}
         />
       )}
     </div>
