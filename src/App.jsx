@@ -47,6 +47,14 @@ import TenantMetrics from './pages/tenant/TenantMetrics'
 import ToolsList from './pages/tenant/ToolsList'
 import FeatureTool from './pages/tenant/FeatureTool'
 
+/* Wrapper para features con acceso directo en el panel del tenant. */
+function AgendaPage() {
+  return <FeatureTool defaultFeatureKey="agenda_turnos" />
+}
+function InventarioPage() {
+  return <FeatureTool defaultFeatureKey="inventario" />
+}
+
 /* --------------------------------------------------------------------------
  * Navegacion de cada rol.
  * Cada item: { to, label, icon } -> se pinta en AppShell (sidebar + navbar).
@@ -107,8 +115,8 @@ export default function App() {
           <Route path="/dashboard/metrics" element={<TenantMetrics />} />
           <Route path="/dashboard/settings" element={<ToolsList />} />
           <Route path="/dashboard/settings/:featureKey" element={<FeatureTool />} />
-          <Route path="/dashboard/agenda" element={<FeatureTool defaultFeatureKey="agenda_turnos" />} />
-          <Route path="/dashboard/inventario" element={<FeatureTool defaultFeatureKey="inventario" />} />
+          <Route path="/dashboard/agenda" element={<AgendaPage />} />
+          <Route path="/dashboard/inventario" element={<InventarioPage />} />
         </Route>
       </Route>
 
