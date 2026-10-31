@@ -8,7 +8,7 @@
  * Ruta: /dashboard/settings/:featureKey
  * ========================================================================== */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save, AlertTriangle, Wrench } from 'lucide-react'
 
@@ -126,15 +126,20 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
         }),
   )
   const [saving, setSaving] = useState(false)
+  const autoSaveTimer = useRef(null)
 
-  const handleSave = async () => {
+  const handleSave = async (contentArg, { silent = false } = {}) => {
     setSaving(true)
     // Para horarios el contenido es el valor (string/objeto), sin wrapper.
     try {
-      const content = scheduleField ? form[scheduleField.key] : form
+      const content = contentArg !== undefined
+        ? contentArg
+        : (scheduleField ? form[scheduleField.key] : form)
       const res = await updateTenant(tenantId, { config: { [feature.key]: content } })
       if (res.data) {
-        toast.success(`"${feature.label}" se guardó y se envió al servidor.`)
+        if (!silent) {
+          toast.success(`"${feature.label}" se guardó y se envió al servidor.`)
+        }
       } else {
         toast.error('No se pudo guardar. Intentá de nuevo.')
       }
@@ -144,6 +149,18 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
       setSaving(false)
     }
   }
+
+  /* Guardado automático para inventario: cada cambio se persiste sin botón. */
+  const autoSave = (content) => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(() => {
+      handleSave(content, { silent: true })
+    }, 500)
+  }
+
+  useEffect(() => () => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+  }, [])
 
   const isWideFeature = feature?.key === 'inventario' || feature?.key === 'agenda_turnos'
 
@@ -213,7 +230,10 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
                 <ErrorBoundary>
                   <InventarioProductos
                     value={form}
-                    onChange={setForm}
+                    onChange={(next) => {
+                      setForm(next)
+                      autoSave(next)
+                    }}
                     tenant={tenant}
                   />
                 </ErrorBoundary>
@@ -229,7 +249,7 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
         </div>
       )}
 
-      {feature.key !== 'agenda_turnos' && (
+      {feature.key !== 'agenda_turnos' && feature.key !== 'inventario' && (
         <div className="flex items-center justify-end gap-3">
           <button
             type="button"

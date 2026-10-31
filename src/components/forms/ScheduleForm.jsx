@@ -227,7 +227,7 @@ export default function ScheduleForm({
               )}
               <button
                 type="button"
-                onClick={onSave}
+                onClick={() => onSave()}
                 disabled={!isValid || saving}
                 className="ml-auto inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60"
               >
