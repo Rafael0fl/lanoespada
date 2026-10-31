@@ -228,33 +228,78 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
         </label>
         <label className="text-xs font-medium text-slate-500">
           Categoría
-          <select
-            value={form.category && categorias.includes(form.category) ? form.category : (form.category ? '__nueva__' : '')}
-            onChange={(e) => {
-              if (e.target.value === '__nueva__') {
-                // Keep current value, show input
-                setForm((p) => ({ ...p, category: p.category || '' }))
-              } else {
-                setForm((p) => ({ ...p, category: e.target.value }))
-              }
-            }}
-            className={`${inputClass} mt-1`}
-          >
-            <option value="">Sin categoría</option>
-            {categorias.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-            <option value="__nueva__">+ Nueva categoría...</option>
-          </select>
-          {(form.category && !categorias.includes(form.category)) && (
-            <input
-              type="text"
-              value={form.category}
+          <div className="mt-1 flex items-center gap-2">
+            <select
+              value={form.category && categorias.includes(form.category) ? form.category : ''}
               onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-              placeholder="Nombre de la nueva categoría"
-              className={`${inputClass} mt-1`}
-              autoFocus
-            />
+              className={`${inputClass} flex-1`}
+            >
+              <option value="">Sin categoría</option>
+              {categorias.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setMostrarModalCategoria(true)}
+              className="shrink-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              title="Nueva categoría"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+          {mostrarModalCategoria && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+              <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-sm font-semibold text-slate-800">Nueva categoría</h3>
+                <input
+                  type="text"
+                  value={nuevaCategoria}
+                  onChange={(e) => setNuevaCategoria(e.target.value)}
+                  placeholder="Nombre de la categoría"
+                  className={`${inputClass} mt-3`}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = nuevaCategoria.trim()
+                      if (val) {
+                        setForm((p) => ({ ...p, category: val }))
+                        setMostrarModalCategoria(false)
+                        setNuevaCategoria('')
+                      }
+                    }
+                    if (e.key === 'Escape') {
+                      setMostrarModalCategoria(false)
+                      setNuevaCategoria('')
+                    }
+                  }}
+                />
+                <div className="mt-4 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setMostrarModalCategoria(false); setNuevaCategoria('') }}
+                    className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = nuevaCategoria.trim()
+                      if (val) {
+                        setForm((p) => ({ ...p, category: val }))
+                        setMostrarModalCategoria(false)
+                        setNuevaCategoria('')
+                      }
+                    }}
+                    disabled={!nuevaCategoria.trim()}
+                    className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60"
+                  >
+                    Añadir
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </label>
         <label className="text-xs font-medium text-slate-500">
