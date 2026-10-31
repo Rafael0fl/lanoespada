@@ -144,8 +144,10 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
     }
   }
 
+  const isWideFeature = featureKey === 'inventario' || featureKey === 'agenda_turnos'
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className={`mx-auto space-y-6 ${isWideFeature ? 'max-w-6xl' : 'max-w-2xl'}`}>
       {/* Encabezado con volver */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
