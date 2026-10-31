@@ -28,7 +28,7 @@
  *   con sidebar + nav items del rol) que tambien renderiza <Outlet />.
  * ========================================================================== */
 
-import { BarChart3, LayoutDashboard, LayoutList, Settings, Store, Users } from 'lucide-react'
+import { BarChart3, Calendar, LayoutDashboard, LayoutList, Package, Settings, Store, Users } from 'lucide-react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import RequireAuth, { HomeRedirect } from './components/RequireAuth'
@@ -65,6 +65,8 @@ const clientNavItems = [
   { to: '/dashboard/customers', label: 'Ver clientes', icon: Users },
   { to: '/dashboard/metrics', label: 'Métricas', icon: BarChart3 },
   { to: '/dashboard/settings', label: 'Configuración', icon: Settings },
+  { to: '/dashboard/agenda', label: 'Agenda de turnos', icon: Calendar },
+  { to: '/dashboard/inventario', label: 'Inventario', icon: Package },
 ]
 
 export default function App() {
@@ -105,6 +107,8 @@ export default function App() {
           <Route path="/dashboard/metrics" element={<TenantMetrics />} />
           <Route path="/dashboard/settings" element={<ToolsList />} />
           <Route path="/dashboard/settings/:featureKey" element={<FeatureTool />} />
+          <Route path="/dashboard/agenda" element={<FeatureTool defaultFeatureKey="agenda_turnos" />} />
+          <Route path="/dashboard/inventario" element={<FeatureTool defaultFeatureKey="inventario" />} />
         </Route>
       </Route>
 

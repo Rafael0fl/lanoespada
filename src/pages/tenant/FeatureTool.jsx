@@ -29,9 +29,10 @@ import {
 } from '../../data/mockBackend'
 import { fetchTenant, updateTenant } from '../../services/api'
 
-export default function FeatureTool() {
+export default function FeatureTool({ defaultFeatureKey }) {
   const { user } = useAuth()
-  const { featureKey } = useParams()
+  const { featureKey: urlFeatureKey } = useParams()
+  const featureKey = defaultFeatureKey || urlFeatureKey
 
   const tenantId = user?.tenantId ?? ''
 
