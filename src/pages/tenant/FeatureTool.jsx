@@ -13,7 +13,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save, AlertTriangle, Wrench } from 'lucide-react'
 
 import AgendaTurnos from '../../components/forms/AgendaTurnos'
-import FeatureField from '../../components/forms/FeatureField'
+import ErrorBoundary from '../../components/ui/ErrorBoundary'
 import InventarioProductos from '../../components/forms/InventarioProductos'
 import PaymentMP from '../../components/forms/PaymentMP'
 import ScheduleForm from '../../components/forms/ScheduleForm'
@@ -196,11 +196,13 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
                 </label>
               )}
               {field.type === 'custom' && field.component === 'AgendaTurnos' ? (
-                <AgendaTurnos
-                  value={form}
-                  onChange={setForm}
-                  tenant={tenant}
-                />
+                <ErrorBoundary>
+                  <AgendaTurnos
+                    value={form}
+                    onChange={setForm}
+                    tenant={tenant}
+                  />
+                </ErrorBoundary>
               ) : field.type === 'custom' && field.component === 'PaymentMP' ? (
                 <PaymentMP
                   value={form}
@@ -208,11 +210,13 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
                   tenant={tenant}
                 />
               ) : field.type === 'custom' && field.component === 'InventarioProductos' ? (
-                <InventarioProductos
-                  value={form}
-                  onChange={setForm}
-                  tenant={tenant}
-                />
+                <ErrorBoundary>
+                  <InventarioProductos
+                    value={form}
+                    onChange={setForm}
+                    tenant={tenant}
+                  />
+                </ErrorBoundary>
               ) : (
                 <FeatureField
                   field={['custom', 'objectList'].includes(field.type) ? { ...field, _tenant: tenant } : field}
