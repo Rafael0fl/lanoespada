@@ -43,7 +43,6 @@ function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
             ))}
             <th className="px-4 py-3 text-right font-semibold text-slate-600">Precio</th>
             <th className="px-4 py-3 text-center font-semibold text-slate-600">Stock</th>
-            <th className="px-4 py-3 text-center font-semibold text-slate-600">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -67,12 +66,6 @@ function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
                   }`}>
                     {p.stock}
                   </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-center gap-1">
-                    <button type="button" onClick={() => onEdit(p)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
-                    <button type="button" onClick={() => onDelete(p.id)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-rose-400 transition hover:bg-rose-50" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
-                  </div>
                 </td>
               </tr>
             )
@@ -165,6 +158,8 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
 
   const [nuevoAttr, setNuevoAttr] = useState('')
   const [mostrarInputAttr, setMostrarInputAttr] = useState(false)
+  const [mostrarModalCategoria, setMostrarModalCategoria] = useState(false)
+  const [nuevaCategoria, setNuevaCategoria] = useState('')
 
   const updateAttr = (key, value) => {
     setForm((prev) => ({
@@ -616,7 +611,7 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
             })}
             {filtrados.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-400">
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">
                   {busqueda ? 'No se encontraron productos.' : 'Sin productos. Hacé clic en "Nuevo producto".'}
                 </td>
               </tr>
