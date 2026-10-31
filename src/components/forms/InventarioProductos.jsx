@@ -160,6 +160,11 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
   const [mostrarInputAttr, setMostrarInputAttr] = useState(false)
   const [mostrarModalCategoria, setMostrarModalCategoria] = useState(false)
   const [nuevaCategoria, setNuevaCategoria] = useState('')
+  const [categoriasLocales, setCategoriasLocales] = useState(categorias)
+
+  useEffect(() => {
+    setCategoriasLocales((prev) => [...new Set([...categorias, ...prev])])
+  }, [categorias])
 
   const updateAttr = (key, value) => {
     setForm((prev) => ({
@@ -225,12 +230,12 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
           Categoría
           <div className="mt-1 flex items-center gap-2">
             <select
-              value={form.category && categorias.includes(form.category) ? form.category : ''}
+              value={form.category && categoriasLocales.includes(form.category) ? form.category : (form.category ? form.category : '')}
               onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
               className={`${inputClass} flex-1`}
             >
               <option value="">Sin categoría</option>
-              {categorias.map((c) => (
+              {categoriasLocales.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
@@ -259,6 +264,7 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
                       const val = nuevaCategoria.trim()
                       if (val) {
                         setForm((p) => ({ ...p, category: val }))
+                        setCategoriasLocales((prev) => [...new Set([...prev, val])])
                         setMostrarModalCategoria(false)
                         setNuevaCategoria('')
                       }
@@ -283,6 +289,7 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
                       const val = nuevaCategoria.trim()
                       if (val) {
                         setForm((p) => ({ ...p, category: val }))
+                        setCategoriasLocales((prev) => [...new Set([...prev, val])])
                         setMostrarModalCategoria(false)
                         setNuevaCategoria('')
                       }
