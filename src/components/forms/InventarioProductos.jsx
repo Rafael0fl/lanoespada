@@ -290,6 +290,11 @@ function ConfigSection({ productos, setProductos }) {
   const [duplicado, setDuplicado] = useState(null) // producto duplicado encontrado
   const [pendiente, setPendiente] = useState(null) // producto pendiente de guardar
 
+  const filtrados = productos.filter((p) =>
+    p.name.toLowerCase().includes(busqueda.toLowerCase()) ||
+    (p.category || '').toLowerCase().includes(busqueda.toLowerCase())
+  )
+
   // Buscar si ya existe un producto con el mismo nombre + mismos atributos
   const buscarDuplicado = (prod) => {
     return productos.find((p) =>
