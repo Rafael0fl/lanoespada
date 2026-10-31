@@ -41,19 +41,13 @@ import RegisterTenant from './pages/socio/RegisterTenant'
 import TenantsList from './pages/socio/TenantsList'
 import TenantCustomers from './pages/socio/TenantCustomers'
 import ChatPage from './pages/socio/ChatPage'
+import AgendaPage from './pages/tenant/AgendaPage'
 import CustomersList from './pages/tenant/CustomersList'
+import InventarioPage from './pages/tenant/InventarioPage'
 import TenantChatPage from './pages/tenant/TenantChatPage'
 import TenantMetrics from './pages/tenant/TenantMetrics'
 import ToolsList from './pages/tenant/ToolsList'
 import FeatureTool from './pages/tenant/FeatureTool'
-
-/* Wrapper para features con acceso directo en el panel del tenant. */
-function AgendaPage() {
-  return <FeatureTool defaultFeatureKey="agenda_turnos" />
-}
-function InventarioPage() {
-  return <FeatureTool defaultFeatureKey="inventario" />
-}
 
 /* --------------------------------------------------------------------------
  * Navegacion de cada rol.
