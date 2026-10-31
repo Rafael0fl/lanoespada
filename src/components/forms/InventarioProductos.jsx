@@ -19,6 +19,7 @@ const MOCK_PRODUCTOS = [
 ]
 
 const MOCK_COLUMNAS = ['talle', 'color', 'marca']
+const MOCK_CATEGORIAS = ['Remeras', 'Pantalones', 'Calzado', 'Accesorios', 'Buzos']
 
 function VistaTabla({ productos }) {
   if (!productos || productos.length === 0) {
@@ -150,7 +151,7 @@ function VistaCatalogo({ productos }) {
   )
 }
 
-function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = [] }) {
+function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = [], setCategorias }) {
   const [form, setForm] = useState(() => {
     const attrs = { ...(producto?.attributes ?? {}) }
     columnas.forEach((col) => {
@@ -276,6 +277,9 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
                       if (val) {
                         setForm((p) => ({ ...p, category: val }))
                         setCategoriasLocales((prev) => [...new Set([...prev, val])])
+                        if (setCategorias) {
+                          setCategorias((prev) => [...new Set([...prev, val])])
+                        }
                         setMostrarModalCategoria(false)
                         setNuevaCategoria('')
                       }
@@ -301,6 +305,9 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
                       if (val) {
                         setForm((p) => ({ ...p, category: val }))
                         setCategoriasLocales((prev) => [...new Set([...prev, val])])
+                        if (setCategorias) {
+                          setCategorias((prev) => [...new Set([...prev, val])])
+                        }
                         setMostrarModalCategoria(false)
                         setNuevaCategoria('')
                       }
@@ -400,7 +407,7 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
     </div>
   )
 }
-function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
+function ConfigSection({ productos, setProductos, columnas, setColumnas, categorias, setCategorias }) {
   const [editando, setEditando] = useState(null)
   const [busqueda, setBusqueda] = useState("")
   const [duplicado, setDuplicado] = useState(null)
@@ -408,8 +415,6 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
   const [configTab, setConfigTab] = useState(null)
   const [nuevaCategoria, setNuevaCategoria] = useState("")
   const [nuevoAtributo, setNuevoAtributo] = useState("")
-
-  const categorias = [...new Set(productos.map((p) => p.category).filter(Boolean))]
 
   const buscarDuplicado = (prod) => {
     return productos.find((p) =>
@@ -628,7 +633,19 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
           </div>
         )}
 
-        {/* Dialogo de duplicado */}
+      {/* Busqueda + boton agregar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar producto..." className={`${inputClass} pl-10`} />
+        </div>
+        <button type="button" onClick={() => setEditando('new')} className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700">
+          <Plus className="h-4 w-4" />
+          Nuevo producto
+        </button>
+      </div>
+
+      {/* Dialogo de duplicado */}
         {duplicado && (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 space-y-3">
             <div className="flex items-start gap-3">
@@ -668,6 +685,7 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
             onCancel={() => setEditando(null)}
             columnas={columnas}
             categorias={categorias}
+            setCategorias={setCategorias}
           />
         )}
 
@@ -834,6 +852,7 @@ export default function InventarioProductos({ value, onChange, tenant }) {
   const [tab, setTab] = useState('ver')
   const [productos, setProductos] = useState(MOCK_PRODUCTOS)
   const [columnas, setColumnas] = useState(MOCK_COLUMNAS)
+  const [categorias, setCategorias] = useState(MOCK_CATEGORIAS)
 
   useEffect(() => {
     if (Array.isArray(value?.productos)) {
@@ -842,16 +861,24 @@ export default function InventarioProductos({ value, onChange, tenant }) {
     if (Array.isArray(value?.columnas)) {
       setColumnas(value.columnas)
     }
+    if (Array.isArray(value?.categorias)) {
+      setCategorias(value.categorias)
+    }
   }, [value])
 
   const handleProductosChange = (next) => {
     setProductos(next)
-    onChange({ ...(value ?? {}), productos: next, columnas })
+    onChange({ ...(value ?? {}), productos: next, columnas, categorias })
   }
 
   const handleColumnasChange = (next) => {
     setColumnas(next)
-    onChange({ ...(value ?? {}), productos, columnas: next })
+    onChange({ ...(value ?? {}), productos, columnas: next, categorias })
+  }
+
+  const handleCategoriasChange = (next) => {
+    setCategorias(next)
+    onChange({ ...(value ?? {}), productos, columnas, categorias: next })
   }
 
   const handleStockChange = (id, delta) => {
