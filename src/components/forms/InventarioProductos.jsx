@@ -4,7 +4,7 @@
  * Configuración y gestión del inventario de productos.
  * ========================================================================== */
 import { useEffect, useState } from 'react'
-import { Package, Plus, Trash2, Eye, Settings, Search, Upload, FileText, Pencil, AlertTriangle, X } from 'lucide-react'
+import { Package, Plus, Trash2, Eye, Settings, Search, Upload, FileText, Pencil, AlertTriangle } from 'lucide-react'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
@@ -20,7 +20,7 @@ const MOCK_PRODUCTOS = [
 
 const MOCK_COLUMNAS = ['talle', 'color', 'marca']
 
-function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
+function VistaTabla({ productos }) {
   if (!productos || productos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
@@ -37,10 +37,9 @@ function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
         <thead className="bg-slate-50">
           <tr>
             <th className="px-4 py-3 text-left font-semibold text-slate-600">Producto</th>
+            <th className="px-4 py-3 text-left font-semibold text-slate-600">SKU</th>
             <th className="px-4 py-3 text-left font-semibold text-slate-600">Categoría</th>
-            {MOCK_COLUMNAS.map((col) => (
-              <th key={col} className="px-4 py-3 text-left font-semibold text-slate-600 capitalize">{col}</th>
-            ))}
+            <th className="px-4 py-3 text-left font-semibold text-slate-600">Atributos</th>
             <th className="px-4 py-3 text-right font-semibold text-slate-600">Precio</th>
             <th className="px-4 py-3 text-center font-semibold text-slate-600">Stock</th>
           </tr>
@@ -51,10 +50,17 @@ function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
             return (
               <tr key={p.id} className={bajoStock ? 'bg-rose-50/40' : ''}>
                 <td className="px-4 py-3 font-medium text-slate-800">{p.name}</td>
+                <td className="px-4 py-3 text-slate-400 text-xs font-mono">{p.sku || '—'}</td>
                 <td className="px-4 py-3 text-slate-500">{p.category || '—'}</td>
-                {MOCK_COLUMNAS.map((col) => (
-                  <td key={col} className="px-4 py-3 text-slate-600">{(p.attributes && p.attributes[col]) || '—'}</td>
-                ))}
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {p.attributes && Object.entries(p.attributes).map(([k, v]) => (
+                      <span key={k} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+                        {k}: {v || '—'}
+                      </span>
+                    ))}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-right font-semibold text-slate-800">
                   ${p.price.toLocaleString('es-AR')}
                 </td>
@@ -70,13 +76,20 @@ function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
               </tr>
             )
           })}
+          {productos.length === 0 && (
+            <tr>
+              <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">
+                Sin productos.
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
   )
 }
 
-function VistaCatalogo({ productos, onStockChange }) {
+function VistaCatalogo({ productos }) {
   if (!productos || productos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
@@ -116,7 +129,7 @@ function VistaCatalogo({ productos, onStockChange }) {
                 <div className="mt-2 flex flex-wrap gap-1">
                   {Object.entries(p.attributes).map(([k, v]) => (
                     <span key={k} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                      {k}: {v}
+                      {k}: {v || '—'}
                     </span>
                   ))}
                 </div>
@@ -140,7 +153,6 @@ function VistaCatalogo({ productos, onStockChange }) {
 function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = [] }) {
   const [form, setForm] = useState(() => {
     const attrs = { ...(producto?.attributes ?? {}) }
-    // Asegurar que los atributos predefinidos existan
     columnas.forEach((col) => {
       if (!(col in attrs)) attrs[col] = ''
     })
@@ -155,7 +167,6 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
       attributes: attrs,
     }
   })
-
   const [nuevoAttr, setNuevoAttr] = useState('')
   const [mostrarInputAttr, setMostrarInputAttr] = useState(false)
   const [mostrarModalCategoria, setMostrarModalCategoria] = useState(false)
@@ -230,7 +241,7 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
           Categoría
           <div className="mt-1 flex items-center gap-2">
             <select
-              value={form.category && categoriasLocales.includes(form.category) ? form.category : (form.category ? form.category : '')}
+              value={form.category && categoriasLocales.includes(form.category) ? form.category : ''}
               onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
               className={`${inputClass} flex-1`}
             >
@@ -381,7 +392,7 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
         <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">
           Cancelar
         </button>
-        <button type="button" onClick={guardar} disabled={!form.name.trim()} className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
+        <button type="button" onClick={guardar} disabled={!form.name.trim() || !form.price || Number(form.price) <= 0} className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
           <Plus className="h-4 w-4" />
           {producto ? 'Guardar cambios' : 'Agregar producto'}
         </button>
@@ -389,21 +400,17 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
     </div>
   )
 }
-
 function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
   const [editando, setEditando] = useState(null)
-  const [busqueda, setBusqueda] = useState('')
-  const [duplicado, setDuplicado] = useState(null) // producto duplicado encontrado
-  const [pendiente, setPendiente] = useState(null) // producto pendiente de guardar
+  const [busqueda, setBusqueda] = useState("")
+  const [duplicado, setDuplicado] = useState(null)
+  const [pendiente, setPendiente] = useState(null)
+  const [configTab, setConfigTab] = useState(null)
+  const [nuevaCategoria, setNuevaCategoria] = useState("")
+  const [nuevoAtributo, setNuevoAtributo] = useState("")
 
   const categorias = [...new Set(productos.map((p) => p.category).filter(Boolean))]
 
-  const filtrados = productos.filter((p) =>
-    p.name.toLowerCase().includes(busqueda.toLowerCase()) ||
-    (p.category || '').toLowerCase().includes(busqueda.toLowerCase())
-  )
-
-  // Buscar si ya existe un producto con el mismo nombre + mismos atributos
   const buscarDuplicado = (prod) => {
     return productos.find((p) =>
       p.id !== prod.id &&
@@ -421,7 +428,6 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
       return
     }
 
-    // Producto nuevo: verificar duplicados
     const dup = buscarDuplicado(prod)
     if (dup) {
       setDuplicado(dup)
@@ -429,15 +435,18 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
       return
     }
 
-    // Sin duplicado, guardar normal
     const next = [...productos, prod]
     setProductos(next)
     setEditando(null)
   }
 
+  const eliminarProducto = (id) => {
+    const next = productos.filter((p) => p.id !== id)
+    setProductos(next)
+  }
+
   const confirmarDuplicado = () => {
     if (!duplicado || !pendiente) return
-    // Sumar stock al existente
     const next = productos.map((p) =>
       p.id === duplicado.id
         ? { ...p, stock: p.stock + pendiente.stock, price: pendiente.price || p.price }
@@ -450,7 +459,6 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
   }
 
   const cancelarDuplicado = () => {
-    // Crear el producto igual (forzar)
     if (pendiente) {
       const next = [...productos, pendiente]
       setProductos(next)
@@ -460,199 +468,286 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
     setEditando(null)
   }
 
-  const eliminarProducto = (id) => {
-    const next = productos.filter((p) => p.id !== id)
-    setProductos(next)
-  }
-
-  const ajustarStock = (id, delta) => {
-    const next = productos.map((p) => (p.id === id ? { ...p, stock: Math.max(0, p.stock + delta) } : p))
-    setProductos(next)
-  }
+  const filtrados = productos.filter((p) =>
+    p.name.toLowerCase().includes(busqueda.toLowerCase()) ||
+    (p.category || '').toLowerCase().includes(busqueda.toLowerCase())
+  )
 
   return (
     <div className="space-y-6">
-      {/* Gestión de atributos predefinidos */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+      {/* Configuracion basica: Categorias y Atributos */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
         <div>
-          <h3 className="text-sm font-semibold text-slate-800">Atributos predefinidos</h3>
-          <p className="text-xs text-slate-500">Definí los atributos que aparecerán en cada producto (talle, color, marca, etc.). Se guardan para no tener que escribirlos cada vez.</p>
+          <h3 className="text-sm font-semibold text-slate-800">Configuracion basica</h3>
+          <p className="text-xs text-slate-500">Gestiona las categorias y atributos de tus productos.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {columnas.map((col) => (
-            <span key={col} className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
-              {col}
-              <button type="button" onClick={() => { const next = columnas.filter((c) => c !== col); setColumnas(next); handleColumnasChange(next) }} className="text-brand-400 transition hover:text-brand-700">×</button>
-            </span>
-          ))}
-          {columnas.length === 0 && (
-            <p className="text-xs text-slate-400">Sin atributos predefinidos. Agregá uno abajo.</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Nuevo atributo (ej: talle, color, marca, vencimiento)"
-            className={`${inputClass} flex-1`}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                const val = e.target.value.trim().toLowerCase()
-                if (val && !columnas.includes(val)) {
-                  const next = [...columnas, val]
-                  setColumnas(next)
-                  handleColumnasChange(next)
-                  e.target.value = ''
-                }
-              }
-            }}
-          />
-          <span className="text-[10px] text-slate-400">Enter para agregar</span>
-        </div>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar producto..." className={`${inputClass} pl-10`} />
+        {/* Botones horizontales */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setConfigTab(configTab === 'categorias' ? null : 'categorias')}
+            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+              configTab === 'categorias'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Categorias
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfigTab(configTab === 'atributos' ? null : 'atributos')}
+            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+              configTab === 'atributos'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Atributos
+          </button>
         </div>
-        <button type="button" onClick={() => setEditando('new')} className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700">
-          <Plus className="h-4 w-4" />
-          Nuevo producto
-        </button>
-      </div>
 
-      {/* Diálogo de duplicado */}
-      {duplicado && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 space-y-3">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-amber-800">
-                Ya existe un producto con estos datos
-              </p>
-              <p className="mt-1 text-sm text-amber-700">
-                <strong>{duplicado.name}</strong>
-                {duplicado.attributes && Object.keys(duplicado.attributes).length > 0 && (
-                  <> ({Object.entries(duplicado.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')})</>
-                )}
-                — Stock actual: {duplicado.stock} unidades.
-              </p>
-              <p className="mt-1 text-sm text-amber-700">
-                El nuevo producto tiene {pendiente?.stock ?? 0} unidades. ¿Querés sumar el stock al producto existente?
-              </p>
+        {configTab === 'categorias' && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={nuevaCategoria}
+                onChange={(e) => setNuevaCategoria(e.target.value)}
+                placeholder="Nueva categoria (ej: Remeras, Pantalones)"
+                className={`${inputClass} flex-1`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = nuevaCategoria.trim()
+                    if (val) {
+                      setNuevaCategoria('')
+                    }
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const val = nuevaCategoria.trim()
+                  if (val) {
+                    setNuevaCategoria('')
+                  }
+                }}
+                disabled={!nuevaCategoria.trim()}
+                className="shrink-0 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+              >
+                Anadir
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {categorias.map((cat) => (
+                <span key={cat} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                  {cat}
+                </span>
+              ))}
+              {categorias.length === 0 && (
+                <p className="text-xs text-slate-400">Sin categorias. Las categorias se crean al asignarlas a un producto.</p>
+              )}
             </div>
           </div>
-          <div className="flex items-center justify-end gap-3">
-            <button type="button" onClick={cancelarDuplicado} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">
-              No, crear igual
-            </button>
-            <button type="button" onClick={confirmarDuplicado} className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700">
-              Sí, sumar stock
-            </button>
+        )}
+
+        {configTab === 'atributos' && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={nuevoAtributo}
+                onChange={(e) => setNuevoAtributo(e.target.value)}
+                placeholder="Nuevo atributo (ej: talle, color, marca)"
+                className={`${inputClass} flex-1`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = nuevoAtributo.trim().toLowerCase()
+                    if (val && !columnas.includes(val)) {
+                      const next = [...columnas, val]
+                      setColumnas(next)
+                      handleColumnasChange(next)
+                      setNuevoAtributo('')
+                    }
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const val = nuevoAtributo.trim().toLowerCase()
+                  if (val && !columnas.includes(val)) {
+                    const next = [...columnas, val]
+                    setColumnas(next)
+                    handleColumnasChange(next)
+                    setNuevoAtributo('')
+                  }
+                }}
+                disabled={!nuevoAtributo.trim()}
+                className="shrink-0 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+              >
+                Anadir
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {columnas.map((col) => (
+                <span key={col} className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
+                  {col}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = columnas.filter((c) => c !== col)
+                      setColumnas(next)
+                      handleColumnasChange(next)
+                    }}
+                    className="text-brand-400 transition hover:text-brand-700"
+                  >
+                    x
+                  </button>
+                </span>
+              ))}
+              {columnas.length === 0 && (
+                <p className="text-xs text-slate-400">Sin atributos. Agrega uno arriba.</p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {editando && !duplicado && (
-        <ProductoForm
-          producto={editando === 'new' ? null : editando}
-          onSave={guardarProducto}
-          onCancel={() => setEditando(null)}
-          columnas={columnas}
-          categorias={categorias}
-        />
-      )}
+        {/* Dialogo de duplicado */}
+        {duplicado && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  Ya existe un producto con estos datos
+                </p>
+                <p className="mt-1 text-sm text-amber-700">
+                  <strong>{duplicado.name}</strong>
+                  {duplicado.attributes && Object.keys(duplicado.attributes).length > 0 && (
+                    <> ({Object.entries(duplicado.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')})</>
+                  )}
+                  - Stock actual: {duplicado.stock} unidades.
+                </p>
+                <p className="mt-1 text-sm text-amber-700">
+                  El nuevo producto tiene {pendiente ? pendiente.stock : 0} unidades. Queres sumar el stock al producto existente?
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <button type="button" onClick={cancelarDuplicado} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">
+                No, crear igual
+              </button>
+              <button type="button" onClick={confirmarDuplicado} className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700">
+                Si, sumar stock
+              </button>
+            </div>
+          </div>
+        )}
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-4 py-3 text-left font-semibold text-slate-600">Producto</th>
-              <th className="px-4 py-3 text-left font-semibold text-slate-600">SKU</th>
-              <th className="px-4 py-3 text-left font-semibold text-slate-600">Categoría</th>
-              <th className="px-4 py-3 text-left font-semibold text-slate-600">Atributos</th>
-              <th className="px-4 py-3 text-right font-semibold text-slate-600">Precio</th>
-              <th className="px-4 py-3 text-center font-semibold text-slate-600">Stock</th>
-              <th className="px-4 py-3 text-center font-semibold text-slate-600">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filtrados.map((p) => {
-              const bajoStock = p.stock <= (p.min_stock ?? 0)
-              return (
-                <tr key={p.id} className={bajoStock ? 'bg-rose-50/40' : ''}>
-                  <td className="px-4 py-3 font-medium text-slate-800">{p.name}</td>
-                  <td className="px-4 py-3 text-slate-400 text-xs font-mono">{p.sku || '—'}</td>
-                  <td className="px-4 py-3 text-slate-500">{p.category || '—'}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {p.attributes && Object.entries(p.attributes).map(([k, v]) => (
-                        <span key={k} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                          {k}: {v || '—'}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                    ${p.price.toLocaleString('es-AR')}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                      p.stock === 0 ? 'bg-rose-100 text-rose-700' :
-                      bajoStock ? 'bg-amber-100 text-amber-700' :
-                      'bg-emerald-100 text-emerald-700'
-                    }`}>
-                      {p.stock}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-1">
-                      <button type="button" onClick={() => ajustarStock(p.id, -1)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100">−</button>
-                      <button type="button" onClick={() => ajustarStock(p.id, +1)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100">+</button>
-                      <button type="button" onClick={() => setEditando(p)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100"><Pencil className="h-3.5 w-3.5" /></button>
-                      <button type="button" onClick={() => eliminarProducto(p.id)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-rose-400 transition hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
+        {/* Formulario de edicion */}
+        {editando && !duplicado && (
+          <ProductoForm
+            producto={editando === 'new' ? null : editando}
+            onSave={guardarProducto}
+            onCancel={() => setEditando(null)}
+            columnas={columnas}
+            categorias={categorias}
+          />
+        )}
+
+        {/* Tabla de productos */}
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Producto</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">SKU</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Categoria</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Atributos</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-600">Precio</th>
+                <th className="px-4 py-3 text-center font-semibold text-slate-600">Stock</th>
+                <th className="px-4 py-3 text-center font-semibold text-slate-600">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtrados.map((p) => {
+                const bajoStock = p.stock <= (p.min_stock ?? 0)
+                return (
+                  <tr key={p.id} className={bajoStock ? 'bg-rose-50/40' : '' }>
+                    <td className="px-4 py-3 font-medium text-slate-800">{p.name}</td>
+                    <td className="px-4 py-3 text-slate-400 text-xs font-mono">{p.sku || '—'}</td>
+                    <td className="px-4 py-3 text-slate-500">{p.category || '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {p.attributes && Object.entries(p.attributes).map(([k, v]) => (
+                          <span key={k} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+                            {k}: {v || '—'}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-slate-800">
+                      ${p.price.toLocaleString('es-AR')}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                        p.stock === 0 ? 'bg-rose-100 text-rose-700' :
+                        bajoStock ? 'bg-amber-100 text-amber-700' :
+                        'bg-emerald-100 text-emerald-700'
+                      }`}>
+                        {p.stock}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <button type="button" onClick={() => setEditando(p)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100"><Pencil className="h-3.5 w-3.5" /></button>
+                        <button type="button" onClick={() => eliminarProducto(p.id)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-rose-400 transition hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+              {filtrados.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-400">
+                    {busqueda ? 'No se encontraron productos.' : 'Sin productos. Hace clic en "Nuevo producto".'}
                   </td>
                 </tr>
-              )
-            })}
-            {filtrados.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">
-                  {busqueda ? 'No se encontraron productos.' : 'Sin productos. Hacé clic en "Nuevo producto".'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Zona de carga masiva y catálogo PDF */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-          <Upload className="mx-auto h-8 w-8 text-slate-400" />
-          <p className="mt-2 text-sm font-semibold text-slate-700">Carga masiva (Excel)</p>
-          <p className="mt-1 text-xs text-slate-500">Subí un archivo .xlsx con tus productos. Las columnas se mapean automáticamente.</p>
-          <button type="button" className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100">
-            <Upload className="h-4 w-4" />
-            Subir Excel
-          </button>
+              )}
+            </tbody>
+          </table>
         </div>
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-          <FileText className="mx-auto h-8 w-8 text-slate-400" />
-          <p className="mt-2 text-sm font-semibold text-slate-700">Catálogo PDF</p>
-          <p className="mt-1 text-xs text-slate-500">Subí tu catálogo en PDF. La IA lo enviará a los clientes que lo pidan.</p>
-          <button type="button" className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100">
-            <Upload className="h-4 w-4" />
-            Subir PDF
-          </button>
+
+        {/* Zona de carga masiva y catalogo PDF */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+            <Upload className="mx-auto h-8 w-8 text-slate-400" />
+            <p className="mt-2 text-sm font-semibold text-slate-700">Carga masiva (Excel)</p>
+            <p className="mt-1 text-xs text-slate-500">Subi un archivo .xlsx con tus productos. Las columnas se mapean automaticamente.</p>
+            <button type="button" className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100">
+              <Upload className="h-4 w-4" />
+              Subir Excel
+            </button>
+          </div>
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+            <FileText className="mx-auto h-8 w-8 text-slate-400" />
+            <p className="mt-2 text-sm font-semibold text-slate-700">Catalogo PDF</p>
+            <p className="mt-1 text-xs text-slate-500">Subi tu catalogo en PDF. La IA lo enviara a los clientes que lo pidan.</p>
+            <button type="button" className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100">
+              <Upload className="h-4 w-4" />
+              Subir PDF
+            </button>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-function VerSection({ productos, onStockChange }) {
+function VerSection({ productos }) {
   const [vista, setVista] = useState('tabla')
   const [busqueda, setBusqueda] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
@@ -697,7 +792,7 @@ function VerSection({ productos, onStockChange }) {
         </div>
         {categorias.length > 0 && (
           <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className={`${inputClass} w-auto`}>
-            <option value="">Todas las categorías</option>
+            <option value="">Todas las categorias</option>
             {categorias.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -708,15 +803,15 @@ function VerSection({ productos, onStockChange }) {
             Tabla
           </button>
           <button type="button" onClick={() => setVista('catalogo')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${vista === 'catalogo' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
-            Catálogo
+            Catalogo
           </button>
         </div>
       </div>
 
       {vista === 'tabla' ? (
-        <VistaTabla productos={filtrados} onStockChange={onStockChange} onEdit={() => {}} onDelete={() => {}} />
+        <VistaTabla productos={filtrados} />
       ) : (
-        <VistaCatalogo productos={filtrados} onStockChange={onStockChange} />
+        <VistaCatalogo productos={filtrados} />
       )}
     </div>
   )
@@ -761,7 +856,7 @@ export default function InventarioProductos({ value, onChange, tenant }) {
         </button>
         <button type="button" onClick={() => setTab('config')} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${tab === 'config' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
           <Settings className="h-4 w-4" />
-          Configuración
+          Configuracion
         </button>
         <div className="ml-auto flex items-center gap-1 text-xs text-slate-400">
           <Package className="h-3.5 w-3.5" />
@@ -770,7 +865,7 @@ export default function InventarioProductos({ value, onChange, tenant }) {
       </div>
 
       {tab === 'ver' && (
-        <VerSection productos={productos} onStockChange={handleStockChange} />
+        <VerSection productos={productos} />
       )}
       {tab === 'config' && (
         <ConfigSection
