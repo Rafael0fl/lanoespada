@@ -307,16 +307,8 @@ function ConfigSection({ productos, setProductos }) {
   const guardarProducto = (prod) => {
     const existe = productos.some((p) => p.id === prod.id)
     if (existe) {
-      // Edición de producto existente
-      setProductos((prev) => {
-        const idx = prev.findIndex((p) => p.id === prod.id)
-        if (idx >= 0) {
-          const next = [...prev]
-          next[idx] = prod
-          return next
-        }
-        return [...prev, prod]
-      })
+      const next = productos.map((p) => (p.id === prod.id ? prod : p))
+      setProductos(next)
       setEditando(null)
       return
     }
@@ -330,20 +322,20 @@ function ConfigSection({ productos, setProductos }) {
     }
 
     // Sin duplicado, guardar normal
-    setProductos((prev) => [...prev, prod])
+    const next = [...productos, prod]
+    setProductos(next)
     setEditando(null)
   }
 
   const confirmarDuplicado = () => {
     if (!duplicado || !pendiente) return
     // Sumar stock al existente
-    setProductos((prev) =>
-      prev.map((p) =>
-        p.id === duplicado.id
-          ? { ...p, stock: p.stock + pendiente.stock, price: pendiente.price || p.price }
-          : p
-      )
+    const next = productos.map((p) =>
+      p.id === duplicado.id
+        ? { ...p, stock: p.stock + pendiente.stock, price: pendiente.price || p.price }
+        : p
     )
+    setProductos(next)
     setDuplicado(null)
     setPendiente(null)
     setEditando(null)
@@ -352,7 +344,8 @@ function ConfigSection({ productos, setProductos }) {
   const cancelarDuplicado = () => {
     // Crear el producto igual (forzar)
     if (pendiente) {
-      setProductos((prev) => [...prev, pendiente])
+      const next = [...productos, pendiente]
+      setProductos(next)
     }
     setDuplicado(null)
     setPendiente(null)
@@ -360,13 +353,13 @@ function ConfigSection({ productos, setProductos }) {
   }
 
   const eliminarProducto = (id) => {
-    setProductos((prev) => prev.filter((p) => p.id !== id))
+    const next = productos.filter((p) => p.id !== id)
+    setProductos(next)
   }
 
   const ajustarStock = (id, delta) => {
-    setProductos((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, stock: Math.max(0, p.stock + delta) } : p))
-    )
+    const next = productos.map((p) => (p.id === id ? { ...p, stock: Math.max(0, p.stock + delta) } : p))
+    setProductos(next)
   }
 
   return (
@@ -586,15 +579,15 @@ export default function InventarioProductos({ value, onChange, tenant }) {
   const [productos, setProductos] = useState(MOCK_PRODUCTOS)
 
   useEffect(() => {
-    if (value?.productos) {
+    if (Array.isArray(value?.productos)) {
       setProductos(value.productos)
     }
   }, [value])
 
   const handleStockChange = (id, delta) => {
-    setProductos((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, stock: Math.max(0, p.stock + delta) } : p))
-    )
+    const next = productos.map((p) => (p.id === id ? { ...p, stock: Math.max(0, p.stock + delta) } : p))
+    setProductos(next)
+    handleProductosChange(next)
   }
 
   const handleProductosChange = (next) => {
