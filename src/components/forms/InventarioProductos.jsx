@@ -151,7 +151,7 @@ function VistaCatalogo({ productos }) {
   )
 }
 
-function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = [], setCategorias }) {
+function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = [] }) {
   const [form, setForm] = useState(() => {
     const attrs = { ...(producto?.attributes ?? {}) }
     columnas.forEach((col) => {
@@ -170,13 +170,6 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
   })
   const [nuevoAttr, setNuevoAttr] = useState('')
   const [mostrarInputAttr, setMostrarInputAttr] = useState(false)
-  const [mostrarModalCategoria, setMostrarModalCategoria] = useState(false)
-  const [nuevaCategoria, setNuevaCategoria] = useState('')
-  const [categoriasLocales, setCategoriasLocales] = useState(categorias)
-
-  useEffect(() => {
-    setCategoriasLocales((prev) => [...new Set([...categorias, ...prev])])
-  }, [categorias])
 
   const updateAttr = (key, value) => {
     setForm((prev) => ({
@@ -242,85 +235,16 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
           Categoría
           <div className="mt-1 flex items-center gap-2">
             <select
-              value={form.category && categoriasLocales.includes(form.category) ? form.category : ''}
+              value={form.category && categorias.includes(form.category) ? form.category : ''}
               onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
               className={`${inputClass} flex-1`}
             >
               <option value="">Sin categoría</option>
-              {categoriasLocales.map((c) => (
+              {categorias.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <button
-              type="button"
-              onClick={() => setMostrarModalCategoria(true)}
-              className="shrink-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
-              title="Nueva categoría"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
           </div>
-          {mostrarModalCategoria && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-              <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-sm font-semibold text-slate-800">Nueva categoría</h3>
-                <input
-                  type="text"
-                  value={nuevaCategoria}
-                  onChange={(e) => setNuevaCategoria(e.target.value)}
-                  placeholder="Nombre de la categoría"
-                  className={`${inputClass} mt-3`}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const val = nuevaCategoria.trim()
-                      if (val) {
-                        setForm((p) => ({ ...p, category: val }))
-                        setCategoriasLocales((prev) => [...new Set([...prev, val])])
-                        if (setCategorias) {
-                          setCategorias((prev) => [...new Set([...prev, val])])
-                        }
-                        setMostrarModalCategoria(false)
-                        setNuevaCategoria('')
-                      }
-                    }
-                    if (e.key === 'Escape') {
-                      setMostrarModalCategoria(false)
-                      setNuevaCategoria('')
-                    }
-                  }}
-                />
-                <div className="mt-4 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => { setMostrarModalCategoria(false); setNuevaCategoria('') }}
-                    className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const val = nuevaCategoria.trim()
-                      if (val) {
-                        setForm((p) => ({ ...p, category: val }))
-                        setCategoriasLocales((prev) => [...new Set([...prev, val])])
-                        if (setCategorias) {
-                          setCategorias((prev) => [...new Set([...prev, val])])
-                        }
-                        setMostrarModalCategoria(false)
-                        setNuevaCategoria('')
-                      }
-                    }}
-                    disabled={!nuevaCategoria.trim()}
-                    className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60"
-                  >
-                    Añadir
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </label>
         <label className="text-xs font-medium text-slate-500">
           Precio ($) *
@@ -407,7 +331,7 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = 
     </div>
   )
 }
-function ConfigSection({ productos, setProductos, columnas, setColumnas, categorias, setCategorias }) {
+function ConfigSection({ productos, setProductos, columnas, setColumnas, categorias, setCategorias, onEliminarCategoria }) {
   const [editando, setEditando] = useState(null)
   const [busqueda, setBusqueda] = useState("")
   const [duplicado, setDuplicado] = useState(null)
@@ -525,7 +449,8 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas, categor
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const val = nuevaCategoria.trim()
-                    if (val) {
+                    if (val && !categorias.includes(val)) {
+                      setCategorias([...categorias, val])
                       setNuevaCategoria('')
                     }
                   }
@@ -535,7 +460,8 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas, categor
                 type="button"
                 onClick={() => {
                   const val = nuevaCategoria.trim()
-                  if (val) {
+                  if (val && !categorias.includes(val)) {
+                    setCategorias([...categorias, val])
                     setNuevaCategoria('')
                   }
                 }}
@@ -551,13 +477,7 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas, categor
                   {cat}
                   <button
                     type="button"
-                    onClick={() => {
-                      // Remove category from all products that have it
-                      const next = productos.map((p) =>
-                        p.category === cat ? { ...p, category: '' } : p
-                      )
-                      setProductos(next)
-                    }}
+                    onClick={() => onEliminarCategoria(cat)}
                     className="text-slate-400 transition hover:text-slate-700"
                   >
                     ×
@@ -565,7 +485,7 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas, categor
                 </span>
               ))}
               {categorias.length === 0 && (
-                <p className="text-xs text-slate-400">Sin categorias. Las categorias se crean al asignarlas a un producto.</p>
+                <p className="text-xs text-slate-400">Sin categorias. Agrega una arriba.</p>
               )}
             </div>
           </div>
@@ -632,6 +552,7 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas, categor
             </div>
           </div>
         )}
+      </div>
 
       {/* Busqueda + boton agregar */}
       <div className="flex flex-wrap items-center gap-3">
@@ -685,7 +606,6 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas, categor
             onCancel={() => setEditando(null)}
             columnas={columnas}
             categorias={categorias}
-            setCategorias={setCategorias}
           />
         )}
 
@@ -774,7 +694,6 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas, categor
           </div>
         </div>
       </div>
-    </div>
   )
 }
 
@@ -881,6 +800,21 @@ export default function InventarioProductos({ value, onChange, tenant }) {
     onChange({ ...(value ?? {}), productos, columnas, categorias: next })
   }
 
+  const handleEliminarCategoria = (cat) => {
+    const nextProductos = productos.map((p) =>
+      p.category === cat ? { ...p, category: '' } : p
+    )
+    const nextCategorias = categorias.filter((c) => c !== cat)
+    setProductos(nextProductos)
+    setCategorias(nextCategorias)
+    onChange({
+      ...(value ?? {}),
+      productos: nextProductos,
+      columnas,
+      categorias: nextCategorias,
+    })
+  }
+
   const handleStockChange = (id, delta) => {
     const next = productos.map((p) => (p.id === id ? { ...p, stock: Math.max(0, p.stock + delta) } : p))
     setProductos(next)
@@ -913,6 +847,9 @@ export default function InventarioProductos({ value, onChange, tenant }) {
           setProductos={handleProductosChange}
           columnas={columnas}
           setColumnas={handleColumnasChange}
+          categorias={categorias}
+          setCategorias={handleCategoriasChange}
+          onEliminarCategoria={handleEliminarCategoria}
         />
       )}
     </div>
