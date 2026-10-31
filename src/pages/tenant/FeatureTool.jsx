@@ -145,7 +145,7 @@ function ToolForm({ tenantId, feature, schema, initial, mock, tenant }) {
     }
   }
 
-  const isWideFeature = featureKey === 'inventario' || featureKey === 'agenda_turnos'
+  const isWideFeature = feature?.key === 'inventario' || feature?.key === 'agenda_turnos'
 
   return (
     <div className={`mx-auto space-y-6 ${isWideFeature ? 'max-w-6xl' : 'max-w-2xl'}`}>
