@@ -544,6 +544,19 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
               {categorias.map((cat) => (
                 <span key={cat} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
                   {cat}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Remove category from all products that have it
+                      const next = productos.map((p) =>
+                        p.category === cat ? { ...p, category: '' } : p
+                      )
+                      setProductos(next)
+                    }}
+                    className="text-slate-400 transition hover:text-slate-700"
+                  >
+                    ×
+                  </button>
                 </span>
               ))}
               {categorias.length === 0 && (
