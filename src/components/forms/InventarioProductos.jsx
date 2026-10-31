@@ -2,37 +2,13 @@
  * InventarioProductos.jsx
  * --------------------------------------------------------------------------
  * Configuración y gestión del inventario de productos.
- *
- * Sigue el mismo patrón que AgendaTurnos: dos pestañas ("Ver" y "Configuración").
- *
- * Pestaña "Ver":
- *   - Vista tabla (Excel-like): columnas editables inline, stock con +/- 
- *   - Vista catálogo (e-commerce): cards con imagen, nombre, precio, stock
- *   - Filtro por categoría/atributo
- *   - Alertas de stock bajo (badge rojo)
- *
- * Pestaña "Configuración":
- *   - Agregar/editar/eliminar productos
- *   - Definir columnas (atributos) dinámicos (talle, color, marca, etc.)
- *   - Subir catálogo PDF
- *   - Subir Excel para carga masiva (futuro)
- *
- * Por ahora es un mock visual (sin backend). Los datos se guardan en el
- * estado local y se sincronizan con el tenant config al guardar.
  * ========================================================================== */
 import { useEffect, useState } from 'react'
-import {
-  Package, Plus, Trash2, Eye, Settings, Search, Upload, FileText,
-  ChevronDown, ChevronUp, AlertTriangle, ImageIcon, Pencil,
-} from 'lucide-react'
+import { Package, Plus, Trash2, Eye, Settings, Search, Upload, FileText, Pencil } from 'lucide-react'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
 
-/* --------------------------------------------------------------------------
- * Datos de ejemplo (mock) para visualizar la UI.
- * En producción estos vendrán del backend (tabla products).
- * ------------------------------------------------------------------------ */
 const MOCK_PRODUCTOS = [
   { id: 'p1', name: 'Remera básica', price: 8500, stock: 12, min_stock: 5, category: 'Remeras', image_url: null, attributes: { talle: 'M', color: 'Azul', marca: 'Nike' } },
   { id: 'p2', name: 'Remera básica', price: 8500, stock: 3, min_stock: 5, category: 'Remeras', image_url: null, attributes: { talle: 'S', color: 'Rojo', marca: 'Nike' } },
@@ -44,11 +20,8 @@ const MOCK_PRODUCTOS = [
 
 const MOCK_COLUMNAS = ['talle', 'color', 'marca']
 
-/* --------------------------------------------------------------------------
- * Vista Tabla (Excel-like)
- * ------------------------------------------------------------------------ */
 function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
-  if (productos.length === 0) {
+  if (!productos || productos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
         <Package className="h-12 w-12 text-slate-400" />
@@ -81,7 +54,7 @@ function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
                 <td className="px-4 py-3 font-medium text-slate-800">{p.name}</td>
                 <td className="px-4 py-3 text-slate-500">{p.category || '—'}</td>
                 {MOCK_COLUMNAS.map((col) => (
-                  <td key={col} className="px-4 py-3 text-slate-600">{p.attributes?.[col] || '—'}</td>
+                  <td key={col} className="px-4 py-3 text-slate-600">{(p.attributes && p.attributes[col]) || '—'}</td>
                 ))}
                 <td className="px-4 py-3 text-right font-semibold text-slate-800">
                   ${p.price.toLocaleString('es-AR')}
@@ -97,38 +70,10 @@ function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => onStockChange(p.id, -1)}
-                      className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
-                      title="Restar stock"
-                    >
-                      −
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onStockChange(p.id, +1)}
-                      className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
-                      title="Sumar stock"
-                    >
-                      +
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onEdit(p)}
-                      className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100"
-                      title="Editar"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(p.id)}
-                      className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-rose-400 transition hover:bg-rose-50"
-                      title="Eliminar"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    <button type="button" onClick={() => onStockChange(p.id, -1)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100" title="Restar stock">−</button>
+                    <button type="button" onClick={() => onStockChange(p.id, +1)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100" title="Sumar stock">+</button>
+                    <button type="button" onClick={() => onEdit(p)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
+                    <button type="button" onClick={() => onDelete(p.id)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-rose-400 transition hover:bg-rose-50" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                 </td>
               </tr>
@@ -140,11 +85,8 @@ function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
   )
 }
 
-/* --------------------------------------------------------------------------
- * Vista Catálogo (e-commerce)
- * ------------------------------------------------------------------------ */
 function VistaCatalogo({ productos, onStockChange }) {
-  if (productos.length === 0) {
+  if (!productos || productos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
         <Package className="h-12 w-12 text-slate-400" />
@@ -160,12 +102,11 @@ function VistaCatalogo({ productos, onStockChange }) {
         const bajoStock = p.stock <= (p.min_stock ?? 0)
         return (
           <div key={p.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
-            {/* Imagen */}
             <div className="flex h-40 items-center justify-center bg-slate-100">
               {p.image_url ? (
                 <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
               ) : (
-                <ImageIcon className="h-12 w-12 text-slate-300" />
+                <Package className="h-12 w-12 text-slate-300" />
               )}
             </div>
             <div className="p-4">
@@ -180,7 +121,6 @@ function VistaCatalogo({ productos, onStockChange }) {
                   </span>
                 )}
               </div>
-              {/* Atributos */}
               {p.attributes && Object.keys(p.attributes).length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {Object.entries(p.attributes).map(([k, v]) => (
@@ -195,24 +135,11 @@ function VistaCatalogo({ productos, onStockChange }) {
                   ${p.price.toLocaleString('es-AR')}
                 </span>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onStockChange(p.id, -1)}
-                    disabled={p.stock <= 0}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100 disabled:opacity-40"
-                  >
-                    −
-                  </button>
+                  <button type="button" onClick={() => onStockChange(p.id, -1)} disabled={p.stock <= 0} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100 disabled:opacity-40">−</button>
                   <span className={`min-w-[2rem] text-center text-sm font-bold ${p.stock === 0 ? 'text-rose-600' : 'text-slate-800'}`}>
                     {p.stock}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => onStockChange(p.id, +1)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100"
-                  >
-                    +
-                  </button>
+                  <button type="button" onClick={() => onStockChange(p.id, +1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100">+</button>
                 </div>
               </div>
             </div>
@@ -223,10 +150,7 @@ function VistaCatalogo({ productos, onStockChange }) {
   )
 }
 
-/* --------------------------------------------------------------------------
- * Formulario de producto (agregar/editar)
- * ------------------------------------------------------------------------ */
-function ProductoForm({ producto, onSave, onCancel, columnas }) {
+function ProductoForm({ producto, onSave, onCancel }) {
   const [form, setForm] = useState(() => ({
     name: producto?.name ?? '',
     price: producto?.price ?? '',
@@ -285,63 +209,27 @@ function ProductoForm({ producto, onSave, onCancel, columnas }) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="text-xs font-medium text-slate-500">
           Nombre *
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            placeholder="Ej: Remera básica"
-            className={`${inputClass} mt-1`}
-          />
+          <input type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Remera básica" className={`${inputClass} mt-1`} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           Categoría
-          <input
-            type="text"
-            value={form.category}
-            onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-            placeholder="Ej: Remeras"
-            className={`${inputClass} mt-1`}
-          />
+          <input type="text" value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} placeholder="Ej: Remeras" className={`${inputClass} mt-1`} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           Precio ($)
-          <input
-            type="number"
-            value={form.price}
-            onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
-            placeholder="8500"
-            className={`${inputClass} mt-1`}
-          />
+          <input type="number" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} placeholder="8500" className={`${inputClass} mt-1`} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           Stock actual
-          <input
-            type="number"
-            value={form.stock}
-            onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))}
-            placeholder="0"
-            className={`${inputClass} mt-1`}
-          />
+          <input type="number" value={form.stock} onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))} placeholder="0" className={`${inputClass} mt-1`} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           Stock mínimo (alerta)
-          <input
-            type="number"
-            value={form.min_stock}
-            onChange={(e) => setForm((p) => ({ ...p, min_stock: e.target.value }))}
-            placeholder="5"
-            className={`${inputClass} mt-1`}
-          />
+          <input type="number" value={form.min_stock} onChange={(e) => setForm((p) => ({ ...p, min_stock: e.target.value }))} placeholder="5" className={`${inputClass} mt-1`} />
         </label>
         <label className="text-xs font-medium text-slate-500">
           URL de imagen
-          <input
-            type="text"
-            value={form.image_url}
-            onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))}
-            placeholder="https://..."
-            className={`${inputClass} mt-1`}
-          />
+          <input type="text" value={form.image_url} onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))} placeholder="https://..." className={`${inputClass} mt-1`} />
         </label>
       </div>
 
@@ -349,11 +237,7 @@ function ProductoForm({ producto, onSave, onCancel, columnas }) {
       <div>
         <div className="mb-2 flex items-center justify-between">
           <span className="text-xs font-medium text-slate-500">Atributos (talle, color, marca, etc.)</span>
-          <button
-            type="button"
-            onClick={addAttr}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 transition hover:text-brand-700"
-          >
+          <button type="button" onClick={addAttr} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 transition hover:text-brand-700">
             <Plus className="h-3.5 w-3.5" />
             Añadir atributo
           </button>
@@ -371,11 +255,7 @@ function ProductoForm({ producto, onSave, onCancel, columnas }) {
                 placeholder={`Valor de ${key}`}
                 className={`${inputClass} flex-1`}
               />
-              <button
-                type="button"
-                onClick={() => removeAttr(key)}
-                className="shrink-0 text-slate-400 transition hover:text-red-500"
-              >
+              <button type="button" onClick={() => removeAttr(key)} className="shrink-0 text-slate-400 transition hover:text-red-500">
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
@@ -387,19 +267,10 @@ function ProductoForm({ producto, onSave, onCancel, columnas }) {
       </div>
 
       <div className="flex items-center justify-end gap-3 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
-        >
+        <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">
           Cancelar
         </button>
-        <button
-          type="button"
-          onClick={guardar}
-          disabled={!form.name.trim()}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60"
-        >
+        <button type="button" onClick={guardar} disabled={!form.name.trim()} className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
           <Plus className="h-4 w-4" />
           {producto ? 'Guardar cambios' : 'Agregar producto'}
         </button>
@@ -408,11 +279,8 @@ function ProductoForm({ producto, onSave, onCancel, columnas }) {
   )
 }
 
-/* --------------------------------------------------------------------------
- * ConfigSection: gestión de productos + columnas + catálogo PDF
- * ------------------------------------------------------------------------ */
-function ConfigSection({ productos, setProductos, columnas }) {
-  const [editando, setEditando] = useState(null) // null | 'new' | product object
+function ConfigSection({ productos, setProductos }) {
+  const [editando, setEditando] = useState(null)
   const [busqueda, setBusqueda] = useState('')
 
   const filtrados = productos.filter((p) =>
@@ -445,48 +313,32 @@ function ConfigSection({ productos, setProductos, columnas }) {
 
   return (
     <div className="space-y-6">
-      {/* Búsqueda + botón agregar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar producto..."
-            className={`${inputClass} pl-10`}
-          />
+          <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar producto..." className={`${inputClass} pl-10`} />
         </div>
-        <button
-          type="button"
-          onClick={() => setEditando('new')}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-        >
+        <button type="button" onClick={() => setEditando('new')} className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700">
           <Plus className="h-4 w-4" />
           Nuevo producto
         </button>
       </div>
 
-      {/* Formulario de edición */}
       {editando && (
         <ProductoForm
           producto={editando === 'new' ? null : editando}
           onSave={guardarProducto}
           onCancel={() => setEditando(null)}
-          columnas={columnas}
         />
       )}
 
-      {/* Tabla de productos */}
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50">
             <tr>
               <th className="px-4 py-3 text-left font-semibold text-slate-600">Producto</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-600">Categoría</th>
-              {columnas.map((col) => (
-                <th key={col} className="px-4 py-3 text-left font-semibold text-slate-600 capitalize">{col}</th>
-              ))}
+              <th className="px-4 py-3 text-left font-semibold text-slate-600">Atributos</th>
               <th className="px-4 py-3 text-right font-semibold text-slate-600">Precio</th>
               <th className="px-4 py-3 text-center font-semibold text-slate-600">Stock</th>
               <th className="px-4 py-3 text-center font-semibold text-slate-600">Acciones</th>
@@ -499,9 +351,15 @@ function ConfigSection({ productos, setProductos, columnas }) {
                 <tr key={p.id} className={bajoStock ? 'bg-rose-50/40' : ''}>
                   <td className="px-4 py-3 font-medium text-slate-800">{p.name}</td>
                   <td className="px-4 py-3 text-slate-500">{p.category || '—'}</td>
-                  {columnas.map((col) => (
-                    <td key={col} className="px-4 py-3 text-slate-600">{p.attributes?.[col] || '—'}</td>
-                  ))}
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {p.attributes && Object.entries(p.attributes).map(([k, v]) => (
+                        <span key={k} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+                          {k}: {v || '—'}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-right font-semibold text-slate-800">
                     ${p.price.toLocaleString('es-AR')}
                   </td>
@@ -516,34 +374,10 @@ function ConfigSection({ productos, setProductos, columnas }) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => ajustarStock(p.id, -1)}
-                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
-                      >
-                        −
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => ajustarStock(p.id, +1)}
-                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditando(p)}
-                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => eliminarProducto(p.id)}
-                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-rose-400 transition hover:bg-rose-50"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <button type="button" onClick={() => ajustarStock(p.id, -1)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100">−</button>
+                      <button type="button" onClick={() => ajustarStock(p.id, +1)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100">+</button>
+                      <button type="button" onClick={() => setEditando(p)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100"><Pencil className="h-3.5 w-3.5" /></button>
+                      <button type="button" onClick={() => eliminarProducto(p.id)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-rose-400 transition hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </td>
                 </tr>
@@ -551,8 +385,8 @@ function ConfigSection({ productos, setProductos, columnas }) {
             })}
             {filtrados.length === 0 && (
               <tr>
-                <td colSpan={4 + columnas.length} className="px-4 py-8 text-center text-sm text-slate-400">
-                {busqueda ? 'No se encontraron productos.' : 'Sin productos. Hacé clic en "Nuevo producto".'}
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">
+                  {busqueda ? 'No se encontraron productos.' : 'Sin productos. Hacé clic en "Nuevo producto".'}
                 </td>
               </tr>
             )}
@@ -565,13 +399,8 @@ function ConfigSection({ productos, setProductos, columnas }) {
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
           <Upload className="mx-auto h-8 w-8 text-slate-400" />
           <p className="mt-2 text-sm font-semibold text-slate-700">Carga masiva (Excel)</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Subí un archivo .xlsx con tus productos. Las columnas se mapean automáticamente.
-          </p>
-          <button
-            type="button"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-          >
+          <p className="mt-1 text-xs text-slate-500">Subí un archivo .xlsx con tus productos. Las columnas se mapean automáticamente.</p>
+          <button type="button" className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100">
             <Upload className="h-4 w-4" />
             Subir Excel
           </button>
@@ -579,13 +408,8 @@ function ConfigSection({ productos, setProductos, columnas }) {
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
           <FileText className="mx-auto h-8 w-8 text-slate-400" />
           <p className="mt-2 text-sm font-semibold text-slate-700">Catálogo PDF</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Subí tu catálogo en PDF. La IA lo enviará a los clientes que lo pidan.
-          </p>
-          <button
-            type="button"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-          >
+          <p className="mt-1 text-xs text-slate-500">Subí tu catálogo en PDF. La IA lo enviará a los clientes que lo pidan.</p>
+          <button type="button" className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100">
             <Upload className="h-4 w-4" />
             Subir PDF
           </button>
@@ -595,11 +419,8 @@ function ConfigSection({ productos, setProductos, columnas }) {
   )
 }
 
-/* --------------------------------------------------------------------------
- * VerSection: vista de inventario (tabla + catálogo)
- * ------------------------------------------------------------------------ */
 function VerSection({ productos, onStockChange }) {
-  const [vista, setVista] = useState('tabla') // 'tabla' | 'catalogo'
+  const [vista, setVista] = useState('tabla')
   const [busqueda, setBusqueda] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
 
@@ -617,7 +438,6 @@ function VerSection({ productos, onStockChange }) {
 
   return (
     <div className="space-y-4">
-      {/* Stats rápidas */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-slate-200 bg-white p-3 text-center">
           <p className="text-2xl font-bold text-slate-800">{productos.length}</p>
@@ -637,24 +457,13 @@ function VerSection({ productos, onStockChange }) {
         </div>
       </div>
 
-      {/* Filtros + toggle de vista */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar producto..."
-            className={`${inputClass} pl-10`}
-          />
+          <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar producto..." className={`${inputClass} pl-10`} />
         </div>
         {categorias.length > 0 && (
-          <select
-            value={filtroCategoria}
-            onChange={(e) => setFiltroCategoria(e.target.value)}
-            className={`${inputClass} w-auto`}
-          >
+          <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className={`${inputClass} w-auto`}>
             <option value="">Todas las categorías</option>
             {categorias.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -662,28 +471,15 @@ function VerSection({ productos, onStockChange }) {
           </select>
         )}
         <div className="flex rounded-xl border border-slate-200 bg-white p-1">
-          <button
-            type="button"
-            onClick={() => setVista('tabla')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-              vista === 'tabla' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
+          <button type="button" onClick={() => setVista('tabla')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${vista === 'tabla' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
             Tabla
           </button>
-          <button
-            type="button"
-            onClick={() => setVista('catalogo')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-              vista === 'catalogo' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
+          <button type="button" onClick={() => setVista('catalogo')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${vista === 'catalogo' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
             Catálogo
           </button>
         </div>
       </div>
 
-      {/* Vista seleccionada */}
       {vista === 'tabla' ? (
         <VistaTabla productos={filtrados} onStockChange={onStockChange} onEdit={() => {}} onDelete={() => {}} />
       ) : (
@@ -693,14 +489,10 @@ function VerSection({ productos, onStockChange }) {
   )
 }
 
-/* --------------------------------------------------------------------------
- * Componente principal
- * ------------------------------------------------------------------------ */
 export default function InventarioProductos({ value, onChange, tenant }) {
   const [tab, setTab] = useState('ver')
   const [productos, setProductos] = useState(MOCK_PRODUCTOS)
 
-  // Sincronizar productos con el estado del form (para que se guarden al guardar)
   useEffect(() => {
     if (value?.productos) {
       setProductos(value.productos)
@@ -715,35 +507,17 @@ export default function InventarioProductos({ value, onChange, tenant }) {
 
   const handleProductosChange = (next) => {
     setProductos(next)
-    // Auto-guardar en el estado del form
     onChange({ ...(value ?? {}), productos: next })
   }
 
   return (
     <div className="space-y-4">
-      {/* Tabs */}
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5">
-        <button
-          type="button"
-          onClick={() => setTab('ver')}
-          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-            tab === 'ver'
-              ? 'bg-brand-600 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-slate-50'
-          }`}
-        >
+        <button type="button" onClick={() => setTab('ver')} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${tab === 'ver' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
           <Eye className="h-4 w-4" />
           Ver inventario
         </button>
-        <button
-          type="button"
-          onClick={() => setTab('config')}
-          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-            tab === 'config'
-              ? 'bg-brand-600 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-slate-50'
-          }`}
-        >
+        <button type="button" onClick={() => setTab('config')} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${tab === 'config' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
           <Settings className="h-4 w-4" />
           Configuración
         </button>
@@ -753,7 +527,6 @@ export default function InventarioProductos({ value, onChange, tenant }) {
         </div>
       </div>
 
-      {/* Contenido */}
       {tab === 'ver' && (
         <VerSection productos={productos} onStockChange={handleStockChange} />
       )}
@@ -761,7 +534,6 @@ export default function InventarioProductos({ value, onChange, tenant }) {
         <ConfigSection
           productos={productos}
           setProductos={handleProductosChange}
-          columnas={MOCK_COLUMNAS}
         />
       )}
     </div>
