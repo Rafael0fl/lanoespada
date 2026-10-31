@@ -30,9 +30,13 @@
 
 import { BarChart3, Calendar, LayoutDashboard, LayoutList, Package, Settings, Store, Users } from 'lucide-react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 
 import RequireAuth, { HomeRedirect } from './components/RequireAuth'
 import AppShell from './components/layouts/AppShell'
+import { useAuth } from './context/AuthContext'
+import { fetchTenant } from './services/api'
+import { isFeatureEnabled } from './data/mockBackend'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -49,27 +53,41 @@ import TenantMetrics from './pages/tenant/TenantMetrics'
 import ToolsList from './pages/tenant/ToolsList'
 import FeatureTool from './pages/tenant/FeatureTool'
 
-/* --------------------------------------------------------------------------
- * Navegacion de cada rol.
- * Cada item: { to, label, icon } -> se pinta en AppShell (sidebar + navbar).
- * ------------------------------------------------------------------------ */
-const adminNavItems = [
-  { to: '/admin', label: 'Muerte en Teherán', icon: LayoutDashboard },
-]
+/* Shell del tenant: filtra los items de navegacion segun las features habilitadas. */
+function TenantShell() {
+  const { user } = useAuth()
+  const [navItems, setNavItems] = useState([
+    { to: '/dashboard/customers', label: 'Ver clientes', icon: Users },
+    { to: '/dashboard/metrics', label: 'Métricas', icon: BarChart3 },
+    { to: '/dashboard/settings', label: 'Configuración', icon: Settings },
+  ])
 
-const partnerNavItems = [
-  { to: '/socio/tenant/nuevo', label: 'Añadir Tenant', icon: Store },
-  { to: '/socio/tenants', label: 'Ver Tenants', icon: LayoutList },
-  { to: '/socio/metrics', label: 'Métricas', icon: BarChart3 },
-]
+  useEffect(() => {
+    if (!user?.tenantId) return
+    let alive = true
+    fetchTenant(user.tenantId)
+      .then((res) => {
+        if (!alive) return
+        const features = res.data?.features
+        const items = [
+          { to: '/dashboard/customers', label: 'Ver clientes', icon: Users },
+          { to: '/dashboard/metrics', label: 'Métricas', icon: BarChart3 },
+          { to: '/dashboard/settings', label: 'Configuración', icon: Settings },
+        ]
+        if (isFeatureEnabled(features, 'agenda_turnos')) {
+          items.push({ to: '/dashboard/agenda', label: 'Agenda de turnos', icon: Calendar })
+        }
+        if (isFeatureEnabled(features, 'inventario')) {
+          items.push({ to: '/dashboard/inventario', label: 'Inventario', icon: Package })
+        }
+        setNavItems(items)
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [user?.tenantId])
 
-const clientNavItems = [
-  { to: '/dashboard/customers', label: 'Ver clientes', icon: Users },
-  { to: '/dashboard/metrics', label: 'Métricas', icon: BarChart3 },
-  { to: '/dashboard/settings', label: 'Configuración', icon: Settings },
-  { to: '/dashboard/agenda', label: 'Agenda de turnos', icon: Calendar },
-  { to: '/dashboard/inventario', label: 'Inventario', icon: Package },
-]
+  return <AppShell navItems={navItems} />
+}
 
 export default function App() {
   return (
@@ -102,15 +120,16 @@ export default function App() {
 
       {/* ================== ROL: TENANT ================== */}
       <Route element={<RequireAuth roles={['tenant']} />}>
-        <Route element={<AppShell navItems={clientNavItems} />}>
+        <Route element={<TenantShell />}>
           <Route path="/dashboard" element={<Navigate to="/dashboard/customers" replace />} />
           <Route path="/dashboard/customers" element={<CustomersList />} />
           <Route path="/dashboard/customers/:customerId" element={<TenantChatPage />} />
           <Route path="/dashboard/metrics" element={<TenantMetrics />} />
           <Route path="/dashboard/settings" element={<ToolsList />} />
           <Route path="/dashboard/settings/:featureKey" element={<FeatureTool />} />
-          <Route path="/dashboard/agenda" element={<AgendaPage />} />
-          <Route path="/dashboard/inventario" element={<InventarioPage />} />
+          {/* Acceso directo: redirige a la feature en settings */}
+          <Route path="/dashboard/agenda" element={<Navigate to="/dashboard/settings/agenda_turnos" replace />} />
+          <Route path="/dashboard/inventario" element={<Navigate to="/dashboard/settings/inventario" replace />} />
         </Route>
       </Route>
 
