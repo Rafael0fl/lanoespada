@@ -70,8 +70,6 @@ function VistaTabla({ productos, onStockChange, onEdit, onDelete }) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-center gap-1">
-                    <button type="button" onClick={() => onStockChange(p.id, -1)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100" title="Restar stock">−</button>
-                    <button type="button" onClick={() => onStockChange(p.id, +1)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100" title="Sumar stock">+</button>
                     <button type="button" onClick={() => onEdit(p)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
                     <button type="button" onClick={() => onDelete(p.id)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-rose-400 transition hover:bg-rose-50" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
@@ -134,13 +132,9 @@ function VistaCatalogo({ productos, onStockChange }) {
                 <span className="text-lg font-bold text-slate-900">
                   ${p.price.toLocaleString('es-AR')}
                 </span>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => onStockChange(p.id, -1)} disabled={p.stock <= 0} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100 disabled:opacity-40">−</button>
-                  <span className={`min-w-[2rem] text-center text-sm font-bold ${p.stock === 0 ? 'text-rose-600' : 'text-slate-800'}`}>
-                    {p.stock}
-                  </span>
-                  <button type="button" onClick={() => onStockChange(p.id, +1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100">+</button>
-                </div>
+                <span className={`text-sm font-bold ${p.stock === 0 ? 'text-rose-600' : 'text-slate-800'}`}>
+                  Stock: {p.stock}
+                </span>
               </div>
             </div>
           </div>
@@ -150,7 +144,7 @@ function VistaCatalogo({ productos, onStockChange }) {
   )
 }
 
-function ProductoForm({ producto, onSave, onCancel, columnas = [] }) {
+function ProductoForm({ producto, onSave, onCancel, columnas = [], categorias = [] }) {
   const [form, setForm] = useState(() => {
     const attrs = { ...(producto?.attributes ?? {}) }
     // Asegurar que los atributos predefinidos existan
@@ -203,9 +197,11 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [] }) {
 
   const guardar = () => {
     if (!form.name.trim()) return
+    if (!form.price || Number(form.price) <= 0) return
     onSave({
       id: producto?.id ?? `p-${Date.now()}`,
       name: form.name.trim(),
+      sku: form.sku.trim(),
       price: Number(form.price) || 0,
       stock: Number(form.stock) || 0,
       min_stock: Number(form.min_stock) || 0,
@@ -232,10 +228,37 @@ function ProductoForm({ producto, onSave, onCancel, columnas = [] }) {
         </label>
         <label className="text-xs font-medium text-slate-500">
           Categoría
-          <input type="text" value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} placeholder="Ej: Remeras" className={`${inputClass} mt-1`} />
+          <select
+            value={form.category && categorias.includes(form.category) ? form.category : (form.category ? '__nueva__' : '')}
+            onChange={(e) => {
+              if (e.target.value === '__nueva__') {
+                // Keep current value, show input
+                setForm((p) => ({ ...p, category: p.category || '' }))
+              } else {
+                setForm((p) => ({ ...p, category: e.target.value }))
+              }
+            }}
+            className={`${inputClass} mt-1`}
+          >
+            <option value="">Sin categoría</option>
+            {categorias.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+            <option value="__nueva__">+ Nueva categoría...</option>
+          </select>
+          {(form.category && !categorias.includes(form.category)) && (
+            <input
+              type="text"
+              value={form.category}
+              onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+              placeholder="Nombre de la nueva categoría"
+              className={`${inputClass} mt-1`}
+              autoFocus
+            />
+          )}
         </label>
         <label className="text-xs font-medium text-slate-500">
-          Precio ($)
+          Precio ($) *
           <input type="number" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} placeholder="8500" className={`${inputClass} mt-1`} />
         </label>
         <label className="text-xs font-medium text-slate-500">
@@ -325,6 +348,8 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
   const [busqueda, setBusqueda] = useState('')
   const [duplicado, setDuplicado] = useState(null) // producto duplicado encontrado
   const [pendiente, setPendiente] = useState(null) // producto pendiente de guardar
+
+  const categorias = [...new Set(productos.map((p) => p.category).filter(Boolean))]
 
   const filtrados = productos.filter((p) =>
     p.name.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -487,6 +512,7 @@ function ConfigSection({ productos, setProductos, columnas, setColumnas }) {
           onSave={guardarProducto}
           onCancel={() => setEditando(null)}
           columnas={columnas}
+          categorias={categorias}
         />
       )}
 
