@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/lanoespada/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>La No Espada — Plataforma B2B</title>
+    <!-- SPA fallback para GitHub Pages: restaura la ruta original cuando
+         se entra directo a una ruta client-side (ej. /login). -->
+    <script>
+      (function() {
+        var redirect = window.location.search.match(/redirect=([^&]*)/);
+        if (redirect) {
+          var path = redirect[1].replace(/~and~/g, '&');
+          var base = window.location.pathname.split('/').slice(0, 2).join('/');
+          if (window.history.replaceState) {
+            window.history.replaceState(null, null, base + '/' + path + window.location.hash);
+          } else {
+            window.location.pathname = base + '/' + path;
+          }
+        }
+      })();
+    </script>
     <script type="module" crossorigin src="/lanoespada/assets/index-Blhy1Ac-.js"></script>
     <link rel="stylesheet" crossorigin href="/lanoespada/assets/index-DB1MY-dY.css">
   </head>
